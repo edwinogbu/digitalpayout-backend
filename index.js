@@ -2,8 +2,14 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path'); // Import the 'path' module
+const Moralis = require("moralis").default;
+// const Moralis = require('moralis').default;
 
+
+const setSecurityHeaders = require('./middlewares/setSecurityHeaders');
 const authRoutes = require('./routes/authRoutes');
+const cryptoNewsRoutes = require('./routes/cryptoNewsRoutes');
+const session = require('express-session');
 
 // const conversationRoutes = require('./routes/conversationRoutes');
 
@@ -15,10 +21,31 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3005;
+// const port = process.env.PORT || 3000;
+
 
 // Middleware
 app.use(express.json());
 app.use(cors());
+
+// Apply the security headers middleware to all routes
+app.use(setSecurityHeaders);
+
+// Apply security headers middleware
+app.use(setSecurityHeaders);
+
+// Configure session middleware
+app.use(session({
+    secret: 'your_secret_key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: true, // Ensures cookies are only sent over HTTPS
+        httpOnly: true, // Prevents client-side JavaScript from accessing the cookie
+        maxAge: 30 * 60 * 1000 // Session expiration time (30 minutes)
+    }
+}));
+
 
 // Database connection
 const connection = mysql.createConnection({
@@ -47,19 +74,122 @@ app.use('/api-docs/auth', swaggerUi.serve, swaggerUi.setup(authRoutes.swaggerDoc
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/cryptonews', cryptoNewsRoutes);
 
-// app.use('/api/chat', conversationRoutes);
-// app.use('/api/chatting', chattingRoutes);
 
 
 app.use('/api-docs/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Start server
 // Default route
+
+
+
+// API endpoint to get tokens for a given address
+app.get('/getTokens', async (req, res, next) => {
+    const { userAddress, chain } = req.query;
+
+    if (!userAddress || !chain) {
+        return res.status(400).json({ error: 'Missing required query parameters: userAddress, chain' });
+    }
+
+    try {
+        const tokens = await Moralis.EvmApi.token.getWalletTokenBalances({
+            chain:chain,
+            address: userAddress,
+        });
+
+        const nfts = await Moralis.EvmApi.nft.getWalletNFTs({
+            chain:chain,
+            address: userAddress,
+            mediaItems: true,
+        });
+
+        const balance = await Moralis.EvmApi.balance.getNativeBalance({
+            chain:chain,
+            address: userAddress,
+        });
+
+        console.log('====================================');
+        console.log(nfts.raw.result);
+        console.log('====================================');
+
+        const myNfts = nfts.raw.result.map((e, i)=>{
+            if (e?.media?.media_collection?.high?.url && !e.possible_spam && (e?.media?.category !== "video")){
+                return e["media"]["media_collection"]["high"]["url"];
+            }
+        })
+
+        const jsonResponse ={
+            tokens: tokens.raw,
+            nfts:myNfts,
+            balance:balance.raw.balance / (10 ** 18),
+        }
+
+        return res.status(200).json(jsonResponse);
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+
+Moralis.start({ 
+    apiKey:process.env.MORALIS_APP_ID,
+ }).then(() => {
+    app.listen(PORT, ()=>{
+        console.log('====================================');
+        console.log(`Listening for API Calls`);
+        console.log('====================================');
+    });
+ });
+
+
 app.get('/', (req, res) => {
     res.send('Welcome to the API server');
 });
 
+
+// const serverUrl = process.env.MORALIS_SERVER_URL;
+// const appId = process.env.MORALIS_APP_ID;
+
+// Moralis.start({ serverUrl, appId })
+//     .then(() => {
+//         console.log('Moralis initialized');
+//     })
+//     .catch(error => {
+//         console.error('Error initializing Moralis:', error);
+//     });
+
+// API endpoint to get tokens for a given address
+// app.get('/api/tokens/:address', async (req, res) => {
+//     const { address } = req.params;
+
+//     try {
+//         const options = { chain: 'eth', address };
+//         const tokens = await Moralis.Web3API.account.getTokenBalances(options);
+//         res.json(tokens);
+//     } catch (error) {
+//         console.error('Error fetching tokens:', error);
+//         res.status(500).json({ error: 'Error fetching tokens' });
+//     }
+// });
+
+// app.get("/getTokens", async(req, res){
+//     const { userAddress, chain } = req.query;
+//    const tokens = await Moralis.EvmApi.token.getWalletTokenBalances({
+//     chain:chain,
+//     address:userAddress,
+//    });
+
+//    const jsonResponse = {
+//     tokens:tokens.raw
+//    }
+
+//    return res.status(200).json(jsonResponse);
+// });
+
+
 // Start server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// app.listen(PORT, () => {
+//     console.log(`Server is running on port ${PORT}`);
+// });

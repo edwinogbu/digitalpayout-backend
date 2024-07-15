@@ -37,7 +37,8 @@ router.get('/users', cacheMiddleware(), authController.getAllUsers);
 router.post('/verify-otp', authController.verifyOTP);
 
 // Use the verifyToken middleware to protect the profile route
-router.get('/profile', userToken, authController.getProfile);
+router.get('/profile',  authController.getProfile);
+// router.get('/profile', userToken, authController.getProfile);
 
 module.exports = router;
 
