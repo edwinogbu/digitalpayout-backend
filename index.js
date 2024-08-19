@@ -9,6 +9,8 @@ const Moralis = require("moralis").default;
 const setSecurityHeaders = require('./middlewares/setSecurityHeaders');
 const authRoutes = require('./routes/authRoutes');
 const cryptoNewsRoutes = require('./routes/cryptoNewsRoutes');
+const cryptoInvestmentRoutes = require('./routes/cryptoInvestmentRoutes')
+const subscriptionPlanRoutes = require('./routes/subscriptionPlanRoutes')
 const session = require('express-session');
 
 // const conversationRoutes = require('./routes/conversationRoutes');
@@ -75,6 +77,8 @@ app.use('/api-docs/auth', swaggerUi.serve, swaggerUi.setup(authRoutes.swaggerDoc
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/cryptonews', cryptoNewsRoutes);
+app.use('/api/crypto', cryptoInvestmentRoutes);
+app.use('/api/subscription', subscriptionPlanRoutes);
 
 
 
@@ -131,6 +135,22 @@ app.get('/getTokens', async (req, res, next) => {
     }
 });
 
+
+// API endpoint to get the top cryptocurrencies by trading volume
+app.get('/getTopCryptosByVolume', async (req, res, next) => {
+    
+try {
+    await Moralis.start({
+      apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImZiZWY0NjcwLTk5ZjctNGE2Ni1iYTMyLWZkMTBiMzU3Yjk4ZCIsIm9yZ0lkIjoiMzk3MTg2IiwidXNlcklkIjoiNDA4MTI5IiwidHlwZUlkIjoiNDg3NmYxOTYtYzdiNS00MGViLWI5ZjQtNWY4Njk5YTlmNDQ3IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MTg4OTc0OTgsImV4cCI6NDg3NDY1NzQ5OH0.F0e9O2dDNUXYaftrWyI7zfJFlTrP2YHpmzuDA6DzeKA"
+    });
+  
+    const response = await Moralis.EvmApi.marketData.getTopCryptoCurrenciesByTradingVolume({});
+  
+    console.log(response.raw);
+  } catch (e) {
+    console.error(e);
+  }
+});
 
 
 Moralis.start({ 
