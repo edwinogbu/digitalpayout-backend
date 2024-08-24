@@ -2,37 +2,66 @@ const express = require('express');
 const router = express.Router();
 const cryptoInvestmentController = require('../controllers/cryptoInvestmentController');
 
-// Route to create a new wallet for a user
-router.post('/create', cryptoInvestmentController.createWallet);
+// Routes for currencies
+router.post('/currencies', cryptoInvestmentController.createCurrency);
+router.put('/currencies/:id', cryptoInvestmentController.updateCurrency);
+router.delete('/currencies/:id', cryptoInvestmentController.deleteCurrency);
+router.get('/currencies', cryptoInvestmentController.getAllCurrencies);
 
-// Route to deposit funds into the wallet
-router.post('/deposit', cryptoInvestmentController.deposit);
+// Routes for wallets
+router.post('/wallets', cryptoInvestmentController.createWallet);
+router.post('/wallets/credit', cryptoInvestmentController.creditWallet);
 
-// Route to approve or reject a deposit (Admin action)
-router.put('/deposit/status', cryptoInvestmentController.updateDepositStatus);
+// Routes for deposits
+router.post('/deposits', cryptoInvestmentController.requestDeposit);
+router.put('/deposits/:depositId', cryptoInvestmentController.updateDepositStatus);
+router.get('/deposits', cryptoInvestmentController.getAllDeposits);
 
-// Route to request a withdrawal
-router.post('/withdrawal', cryptoInvestmentController.requestWithdrawal);
+// Routes for withdrawals
+router.post('/withdrawals', cryptoInvestmentController.requestWithdrawal);
+router.put('/withdrawals/:transactionId', cryptoInvestmentController.updateWithdrawalStatus);
 
-// Route to approve or reject a withdrawal (Admin action)
-router.put('/withdrawal/status', cryptoInvestmentController.updateWithdrawalStatus);
-
-// Route to add earnings to a subscription
-router.post('/earnings', cryptoInvestmentController.addEarnings);
-
-// Route to create a new subscription plan for a wallet
-router.post('/subscription', cryptoInvestmentController.createSubscription);
-
-// Route to handle subscription expiration
-router.put('/subscription/expiration', cryptoInvestmentController.handleSubscriptionExpiration);
-
-// Route to request a payout
-router.post('/payout', cryptoInvestmentController.requestPayout);
-
-// Route to approve or reject a payout (Admin action)
-router.put('/payout/status', cryptoInvestmentController.updatePayoutStatus);
+// Routes for transactions
+router.get('/transactions/wallet/:walletId', cryptoInvestmentController.getAllTransactionsByWalletId);
 
 module.exports = router;
+
+
+// const express = require('express');
+// const router = express.Router();
+// const cryptoInvestmentController = require('../controllers/cryptoInvestmentController');
+
+// // Route to create a new wallet for a user
+// router.post('/create', cryptoInvestmentController.createWallet);
+
+// // Route to deposit funds into the wallet
+// router.post('/deposit', cryptoInvestmentController.deposit);
+
+// // Route to approve or reject a deposit (Admin action)
+// router.put('/deposit/status', cryptoInvestmentController.updateDepositStatus);
+
+// // Route to request a withdrawal
+// router.post('/withdrawal', cryptoInvestmentController.requestWithdrawal);
+
+// // Route to approve or reject a withdrawal (Admin action)
+// router.put('/withdrawal/status', cryptoInvestmentController.updateWithdrawalStatus);
+
+// // Route to add earnings to a subscription
+// router.post('/earnings', cryptoInvestmentController.addEarnings);
+
+// // Route to create a new subscription plan for a wallet
+// router.post('/subscription', cryptoInvestmentController.createSubscription);
+
+// // Route to handle subscription expiration
+// router.put('/subscription/expiration', cryptoInvestmentController.handleSubscriptionExpiration);
+
+// // Route to request a payout
+// router.post('/payout', cryptoInvestmentController.requestPayout);
+
+// // Route to approve or reject a payout (Admin action)
+// router.put('/payout/status', cryptoInvestmentController.updatePayoutStatus);
+
+// module.exports = router;
 
 
 // const express = require('express');
