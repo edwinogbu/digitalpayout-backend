@@ -1,0 +1,144 @@
+To include the duration in the investment calculation, you need to account for how the return is distributed over the specified time period. In this case, the duration is 60, which could be interpreted as days, months, or any other time unit depending on the context of your investment.
+
+Investment Details for gold
+Rate: 12% (annual or as specified)
+Deposit Amount: 15,000
+Duration: 60 (assuming days or months; adjust according to your investment period)
+Scenario 1: Duration in Days
+If the duration is in days and the rate is annual:
+
+Convert Annual Rate to Daily Rate:
+
+Daily Rate
+=
+Annual Rate
+365
+=
+12
+365
+≈
+0.0328767
+%
+Daily Rate= 
+365
+Annual Rate
+​
+ = 
+365
+12
+​
+ ≈0.0328767%
+Calculate Interest for the Given Duration:
+
+Interest
+=
+Deposit Amount
+×
+Daily Rate
+×
+Duration
+Interest=Deposit Amount×Daily Rate×Duration
+Interest
+=
+15
+,
+000
+×
+0.000328767
+×
+60
+≈
+295.68
+Interest=15,000×0.000328767×60≈295.68
+Total Amount:
+
+Total Amount
+=
+Deposit Amount
++
+Interest
+=
+15
+,
+000
++
+295.68
+=
+15
+,
+295.68
+Total Amount=Deposit Amount+Interest=15,000+295.68=15,295.68
+Scenario 2: Duration in Months
+If the duration is in months and the rate is annual:
+
+Convert Annual Rate to Monthly Rate:
+
+Monthly Rate
+=
+Annual Rate
+12
+=
+12
+12
+=
+1
+%
+Monthly Rate= 
+12
+Annual Rate
+​
+ = 
+12
+12
+​
+ =1%
+Calculate Interest for the Given Duration:
+
+Interest
+=
+Deposit Amount
+×
+Monthly Rate
+×
+Duration
+Interest=Deposit Amount×Monthly Rate×Duration
+Interest
+=
+15
+,
+000
+×
+0.01
+×
+60
+=
+9
+,
+000
+Interest=15,000×0.01×60=9,000
+Total Amount:
+
+Total Amount
+=
+Deposit Amount
++
+Interest
+=
+15
+,
+000
++
+9
+,
+000
+=
+24
+,
+000
+Total Amount=Deposit Amount+Interest=15,000+9,000=24,000
+Summary
+The total returns will vary based on whether the duration is in days or months. Ensure you understand the duration unit used for your investment and adjust the calculations accordingly.
+
+For Days: Total Amount = 15,295.68 (assuming annual rate divided into daily rate).
+For Months: Total Amount = 24,000 (assuming simple monthly interest without compounding).
+If you need a specific calculation based on how your rate is compounded or if you have more details, let me know!

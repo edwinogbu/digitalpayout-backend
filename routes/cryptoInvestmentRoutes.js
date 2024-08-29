@@ -1,30 +1,227 @@
 const express = require('express');
 const router = express.Router();
 const cryptoInvestmentController = require('../controllers/cryptoInvestmentController');
+const multer = require('multer');
+const fs = require('fs');
 
-// Routes for currencies
+// Multer storage configuration
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/'); // Uploads will be stored in the 'uploads' directory
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9); // Generate a unique filename
+        cb(null, uniqueSuffix + '-' + file.originalname); // Filename format: <timestamp>-<originalname>
+    }
+});
+
+// File filter to accept only DOC, PDF, TXT, and specified image file formats
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = [
+        'application/msword', // DOC
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+        'application/pdf', // PDF
+        'text/plain', // TXT
+        'image/jpeg', // JPG
+        'image/png', // PNG
+        'image/gif', // GIF
+        'image/webp', // WEBP
+        'image/tiff', // TIFF
+        'image/vnd.adobe.photoshop', // PSD
+        'image/x-raw', // RAW
+        'image/bmp', // BMP
+        'image/heif', // HEIF
+        'image/x-indesign', // INDD
+        'image/jp2', // JPEG 2000
+        'image/svg+xml', // SVG
+        'application/postscript', // AI
+        'application/eps', // EPS
+        'application/octet-stream' // PDF
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only DOC, PDF, TXT, JPG, PNG, GIF, WEBP, TIFF, PSD, RAW, BMP, HEIF, INDD, JPEG 2000, SVG, AI, EPS, and PDF files are allowed'), false);
+    }
+};
+
+// Multer upload instance for handling file uploads
+const upload = multer({ storage: storage, fileFilter: fileFilter });
+
+// Middleware function to handle file uploads
+const uploadMiddleware = upload.single('proofOfPayment');
+
+
+
+// Routes for currency operations
 router.post('/currencies', cryptoInvestmentController.createCurrency);
-router.put('/currencies/:id', cryptoInvestmentController.updateCurrency);
+router.put('/currencies', cryptoInvestmentController.updateCurrency);
 router.delete('/currencies/:id', cryptoInvestmentController.deleteCurrency);
 router.get('/currencies', cryptoInvestmentController.getAllCurrencies);
 
-// Routes for wallets
+// Routes for wallet operations
 router.post('/wallets', cryptoInvestmentController.createWallet);
 router.post('/wallets/credit', cryptoInvestmentController.creditWallet);
+router.get('/wallets/:walletId/transactions', cryptoInvestmentController.getAllTransactionsByWalletId);
+router.get('/wallets/:userId/details', cryptoInvestmentController.getUserWalletAndSubscriptionDetails);
 
-// Routes for deposits
-router.post('/deposits', cryptoInvestmentController.requestDeposit);
-router.put('/deposits/:depositId', cryptoInvestmentController.updateDepositStatus);
+// Routes for deposit operations
+router.post('/deposits',  uploadMiddleware, cryptoInvestmentController.requestDeposit);
+router.put('/deposits/:depositId/status', cryptoInvestmentController.updateDepositStatus);
+router.post('/deposits/subscription', uploadMiddleware, cryptoInvestmentController.handleDepositAndSubscription);
 router.get('/deposits', cryptoInvestmentController.getAllDeposits);
 
-// Routes for withdrawals
+// Routes for withdrawal operations
 router.post('/withdrawals', cryptoInvestmentController.requestWithdrawal);
-router.put('/withdrawals/:transactionId', cryptoInvestmentController.updateWithdrawalStatus);
+router.put('/withdrawals/:transactionId/status', cryptoInvestmentController.updateWithdrawalStatus);
+router.get('/wallets/:walletId/withdrawals', cryptoInvestmentController.getWithdrawalsByWalletId);
 
-// Routes for transactions
-router.get('/transactions/wallet/:walletId', cryptoInvestmentController.getAllTransactionsByWalletId);
+// Routes for subscription operations
+router.post('/subscriptions', cryptoInvestmentController.createSubscription);
+router.put('/subscriptions', cryptoInvestmentController.updateSubscription);
+router.get('/wallets/:walletId/subscriptions', cryptoInvestmentController.getAllSubscriptionsByWalletId);
+router.get('/subscriptions', cryptoInvestmentController.getAllSubscriptions);
+router.get('/subscriptions/:subscriptionId', cryptoInvestmentController.getSubscriptionDetails);
+router.get('/wallets/:walletId/earnings', cryptoInvestmentController.getSubscriptionEarnings);
+router.put('/subscriptions/earnings', cryptoInvestmentController.updateSubscriptionEarnings);
+
+router.delete('/subscriptions/:subscriptionId', cryptoInvestmentController.deleteSubscription);
+// Route to get subscription by criteria (userId, depositId, walletId, or subscriptionId)
+router.get('/subscriptions/search', cryptoInvestmentController.getSubscriptionsByCriteria);// Route to list all subscriptions
+router.get('/subscriptions', cryptoInvestmentController.listAllSubscriptions);
+
+router.get('/subscriptions/user/:userId', cryptoInvestmentController.getSubscriptionDetailsByUserId);
+
+
+
+
+// Routes for payout operations
+router.post('/payouts', cryptoInvestmentController.requestPayout);
+router.put('/payouts/:payoutId/status', cryptoInvestmentController.updatePayoutStatus);
+router.get('/wallets/:walletId/payouts', cryptoInvestmentController.getPayoutsByWalletId);
+router.get('/payouts', cryptoInvestmentController.getAllPayouts);
 
 module.exports = router;
+
+
+// const express = require('express');
+// const router = express.Router();
+// const cryptoInvestmentController = require('../controllers/cryptoInvestmentController');
+// const multer = require('multer');
+// const fs = require('fs');
+
+// // Multer storage configuration
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, 'uploads/'); // Uploads will be stored in the 'uploads' directory
+//     },
+//     filename: function (req, file, cb) {
+//         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9); // Generate a unique filename
+//         cb(null, uniqueSuffix + '-' + file.originalname); // Filename format: <timestamp>-<originalname>
+//     }
+// });
+
+// // File filter to accept only DOC, PDF, TXT, and specified image file formats
+// const fileFilter = (req, file, cb) => {
+//     const allowedTypes = [
+//         'application/msword', // DOC
+//         'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+//         'application/pdf', // PDF
+//         'text/plain', // TXT
+//         'image/jpeg', // JPG
+//         'image/png', // PNG
+//         'image/gif', // GIF
+//         'image/webp', // WEBP
+//         'image/tiff', // TIFF
+//         'image/vnd.adobe.photoshop', // PSD
+//         'image/x-raw', // RAW
+//         'image/bmp', // BMP
+//         'image/heif', // HEIF
+//         'image/x-indesign', // INDD
+//         'image/jp2', // JPEG 2000
+//         'image/svg+xml', // SVG
+//         'application/postscript', // AI
+//         'application/eps', // EPS
+//         'application/octet-stream' // PDF
+//     ];
+
+//     if (allowedTypes.includes(file.mimetype)) {
+//         cb(null, true);
+//     } else {
+//         cb(new Error('Only DOC, PDF, TXT, JPG, PNG, GIF, WEBP, TIFF, PSD, RAW, BMP, HEIF, INDD, JPEG 2000, SVG, AI, EPS, and PDF files are allowed'), false);
+//     }
+// };
+
+// // Multer upload instance for handling file uploads
+// const upload = multer({ storage: storage, fileFilter: fileFilter });
+
+// // Middleware function to handle file uploads
+// const uploadMiddleware = upload.single('proofOfPayment');
+
+
+
+// // Routes for currencies
+// router.post('/currencies', cryptoInvestmentController.createCurrency);
+// router.put('/currencies/:id', cryptoInvestmentController.updateCurrency);
+// router.delete('/currencies/:id', cryptoInvestmentController.deleteCurrency);
+// router.get('/currencies', cryptoInvestmentController.getAllCurrencies);
+
+// // Routes for wallets
+// router.post('/wallets', cryptoInvestmentController.createWallet);
+// router.post('/wallets/credit', cryptoInvestmentController.creditWallet);
+
+// // Routes for deposits
+// router.post('/deposits', uploadMiddleware, cryptoInvestmentController.requestDeposit);
+// router.put('/deposits/:depositId', cryptoInvestmentController.updateDepositStatus);
+// router.get('/deposits', cryptoInvestmentController.getAllDeposits);
+
+// // Routes for withdrawals
+// router.post('/withdrawals', cryptoInvestmentController.requestWithdrawal);
+// router.put('/withdrawals/:transactionId', cryptoInvestmentController.updateWithdrawalStatus);
+
+// // Routes for transactions
+// router.get('/transactions/wallet/:walletId', cryptoInvestmentController.getAllTransactionsByWalletId);
+
+// module.exports = router;
+
+
+// const currencies = [
+//     { code: 'BTC', symbol: '₿', name: 'Bitcoin' },
+//     { code: 'ETH', symbol: 'Ξ', name: 'Ethereum' },
+//     { code: 'XRP', symbol: 'XRP', name: 'Ripple' },
+//     { code: 'LTC', symbol: 'Ł', name: 'Litecoin' },
+//     { code: 'BCH', symbol: 'BCH', name: 'Bitcoin Cash' },
+//     { code: 'BNB', symbol: 'BNB', name: 'Binance Coin' },
+//     { code: 'ADA', symbol: '₳', name: 'Cardano' },
+//     { code: 'DOGE', symbol: 'Ð', name: 'Dogecoin' },
+//     { code: 'DOT', symbol: 'DOT', name: 'Polkadot' },
+//     { code: 'SOL', symbol: 'SOL', name: 'Solana' },
+//     { code: 'LINK', symbol: 'LINK', name: 'Chainlink' },
+//     { code: 'XLM', symbol: '*', name: 'Stellar' },
+//     { code: 'USDT', symbol: 'USDT', name: 'Tether' },
+//     { code: 'USDC', symbol: 'USDC', name: 'USD Coin' },
+//     { code: 'UNI', symbol: 'UNI', name: 'Uniswap' },
+//     { code: 'AVAX', symbol: 'AVAX', name: 'Avalanche' },
+//     { code: 'MATIC', symbol: 'MATIC', name: 'Polygon' },
+//     { code: 'ATOM', symbol: 'ATOM', name: 'Cosmos' },
+//     { code: 'TRX', symbol: 'TRX', name: 'TRON' },
+//     { code: 'FTT', symbol: 'FTT', name: 'FTX Token' }
+// ];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // const express = require('express');
