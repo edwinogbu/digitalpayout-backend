@@ -1,158 +1,7 @@
-// const mysql = require('mysql');
-// const dotenv = require('dotenv');
-
-// dotenv.config();
-
-// // Create a pool of MySQL connections
-// const pool = mysql.createPool({
-//     connectionLimit: process.env.CONNECTION_LIMIT || 10,
-//     host: process.env.DB_HOST,
-//     user: process.env.DB_USER,
-//     password: process.env.DB_PASSWORD,
-//     database: process.env.DB_NAME,
-// });
-
-// // Helper function to execute SQL queries
-// function query(sql, args) {
-//     return new Promise((resolve, reject) => {
-//         pool.getConnection((err, connection) => {
-//             if (err) {
-//                 return reject(err);
-//             }
-
-//             connection.query(sql, args, (err, rows) => {
-//                 connection.release();
-
-//                 if (err) {
-//                     return reject(err);
-//                 }
-
-//                 resolve(rows);
-//             });
-//         });
-//     });
-// }
-
-// // Table creation SQL statements
-// const createCurrenciesTable = `
-//     CREATE TABLE IF NOT EXISTS currencies (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         code VARCHAR(10) UNIQUE NOT NULL,
-//         symbol VARCHAR(5) NOT NULL,
-//         name VARCHAR(50) NOT NULL
-//     );
-// `;
-
-// const createWalletsTable = `
-//     CREATE TABLE IF NOT EXISTS wallets (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         userId INT NOT NULL,
-//         balance DECIMAL(15, 2) DEFAULT 0.00,
-//         currencyId INT NOT NULL,
-//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-//         FOREIGN KEY (userId) REFERENCES users(id),
-//         FOREIGN KEY (currencyId) REFERENCES currencies(id)
-//     );
-// `;
-
-// const createTransactionsTable = `
-//     CREATE TABLE IF NOT EXISTS transactions (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         walletId INT NOT NULL,
-//         type ENUM('deposit', 'withdrawal', 'earning') NOT NULL,
-//         amount DECIMAL(15, 2) NOT NULL,
-//         currencyId INT NOT NULL,
-//         status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
-//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         FOREIGN KEY (walletId) REFERENCES wallets(id),
-//         FOREIGN KEY (currencyId) REFERENCES currencies(id)
-//     );
-// `;
-
-// const createPayoutsTable = `
-//     CREATE TABLE IF NOT EXISTS payouts (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         walletId INT NOT NULL,
-//         amount DECIMAL(15, 2) NOT NULL,
-//         currencyId INT NOT NULL,
-//         status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
-//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-//         FOREIGN KEY (walletId) REFERENCES wallets(id),
-//         FOREIGN KEY (currencyId) REFERENCES currencies(id)
-//     );
-// `;
-
-// const createSubscriptionsTable = `
-//     CREATE TABLE IF NOT EXISTS subscriptions (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         walletId INT,
-//         planId INT,
-//         startDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         endDate TIMESTAMP NULL,
-//         earnings DECIMAL(15, 2) DEFAULT 0.00,
-//         currencyId INT NOT NULL,
-//         reinvest BOOLEAN DEFAULT FALSE,
-//         FOREIGN KEY (walletId) REFERENCES wallets(id),
-//         FOREIGN KEY (planId) REFERENCES subscription_plans(id),
-//         FOREIGN KEY (currencyId) REFERENCES currencies(id)
-//     );
-// `;
-
-// const createDepositsTable = `
-//     CREATE TABLE IF NOT EXISTS deposits (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         walletId INT NOT NULL,
-//         amount DECIMAL(15, 2) NOT NULL,
-//         currencyId INT NOT NULL,
-//         status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
-//         proofOfPayment VARCHAR(255) DEFAULT NULL,  -- Path to proof of payment file
-//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         FOREIGN KEY (walletId) REFERENCES wallets(id),
-//         FOREIGN KEY (currencyId) REFERENCES currencies(id)
-//     );
-// `;
-// const createSubscriptionPlansTableQuery = `
-//     CREATE TABLE IF NOT EXISTS subscription_plans (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         rate VARCHAR(10) NOT NULL,
-//         duration VARCHAR(50) NOT NULL,
-//         minInvest DECIMAL(10, 2) NOT NULL,
-//         maxInvest DECIMAL(10, 2) NOT NULL,
-//         avgMonthly VARCHAR(20) NOT NULL,
-//         label ENUM('basic', 'regular', 'popular', 'bronze', 'silver', 'gold') NOT NULL DEFAULT 'basic',
-//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-//     )
-// `;
-
-// // Function to create tables
-// async function createTables() {
-//     try {
-//         await query(createCurrenciesTable);
-//         await query(createWalletsTable);
-//         await query(createTransactionsTable);
-//         await query(createPayoutsTable);
-//         await query(createSubscriptionsTable);
-//         await query(createDepositsTable);
-//         console.log('All tables created successfully');
-//     } catch (error) {
-//         console.error('Error creating tables:', error);
-//         throw error;
-//     }
-// }
-
-// // Call the function to create tables
-// createTables();
-
-// const cryptoInvestmentService = {};
-
-
-
 // Create a new currency
 const mysql = require('mysql');
 const dotenv = require('dotenv');
+const crypto = require('crypto');
 
 dotenv.config();
 
@@ -196,18 +45,40 @@ const createCurrenciesTable = `
     );
 `;
 
+// const createWalletsTable = `
+//     CREATE TABLE IF NOT EXISTS wallets (
+//         id INT AUTO_INCREMENT PRIMARY KEY,
+//         userId INT NOT NULL,
+//         walletAddress VARCHAR(255) UNIQUE NOT NULL,
+//         balance DECIMAL(15, 2) DEFAULT 0.00,
+//         currencyId INT NOT NULL,
+//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+//         FOREIGN KEY (userId) REFERENCES users(id),
+//         FOREIGN KEY (currencyId) REFERENCES currencies(id)
+//     );
+// `;
+
+
 const createWalletsTable = `
     CREATE TABLE IF NOT EXISTS wallets (
         id INT AUTO_INCREMENT PRIMARY KEY,
         userId INT NOT NULL,
+        walletAddress VARCHAR(255) UNIQUE NOT NULL,
         balance DECIMAL(15, 2) DEFAULT 0.00,
+        depositId INT DEFAULT NULL,  -- New column for foreign key reference to deposits
+        depositAmount DECIMAL(15, 2) DEFAULT 0.00,  -- New column for deposit amount
         currencyId INT NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (userId) REFERENCES users(id),
-        FOREIGN KEY (currencyId) REFERENCES currencies(id)
+        FOREIGN KEY (currencyId) REFERENCES currencies(id),
+        FOREIGN KEY (depositId) REFERENCES deposits(id)  -- Foreign key to deposits table
     );
 `;
+
+
+
 
 const createTransactionsTable = `
     CREATE TABLE IF NOT EXISTS transactions (
@@ -245,11 +116,33 @@ const createSubscriptionPlansTableQuery = `
         minInvest DECIMAL(10, 2) NOT NULL,
         maxInvest DECIMAL(10, 2) NOT NULL,
         avgMonthly VARCHAR(20) NOT NULL,
-        label ENUM('basic', 'regular', 'popular', 'bronze', 'silver', 'gold') NOT NULL DEFAULT 'basic',
+        label ENUM('basic', 'regular', 'popular', 'bronze', 'silver', 'gold',  'platinum', 'diamond', 'premium', 'elite', 'ultimate') NOT NULL DEFAULT 'basic',
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
 `;
+
+
+
+const createDepositsTable = `
+    CREATE TABLE IF NOT EXISTS deposits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    planId INT NOT NULL,
+    userId INT NOT NULL,
+    walletId INT NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    currencyId INT NOT NULL,
+    proofOfPayment VARCHAR(255) DEFAULT NULL,
+    status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (planId) REFERENCES subscription_plans(id),
+    FOREIGN KEY (userId) REFERENCES users(id),
+    FOREIGN KEY (walletId) REFERENCES wallets(id),
+    FOREIGN KEY (currencyId) REFERENCES currencies(id)
+);
+
+`;
+
 
 const createSubscriptionsTable = `
     CREATE TABLE IF NOT EXISTS subscriptions (
@@ -274,21 +167,6 @@ const createSubscriptionsTable = `
         FOREIGN KEY (depositId) REFERENCES deposits(id)  -- Foreign key relationship
     );
 `;
-
-const createDepositsTable = `
-    CREATE TABLE IF NOT EXISTS deposits (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        walletId INT NOT NULL,
-        amount DECIMAL(15, 2) NOT NULL,
-        currencyId INT NOT NULL,
-        status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
-        proofOfPayment VARCHAR(255) DEFAULT NULL,  -- Path to proof of payment file
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (walletId) REFERENCES wallets(id),
-        FOREIGN KEY (currencyId) REFERENCES currencies(id)
-    );
-`;
-
 // Function to create tables
 async function createTables() {
     try {
@@ -306,28 +184,8 @@ async function createTables() {
     }
 }
 
-// Function to alter the subscriptions table to add depositId foreign key
-// const alterSubscriptionsTable = `
-//     ALTER TABLE subscriptions 
-//     ADD COLUMN depositId INT,
-//     ADD CONSTRAINT fk_depositId FOREIGN KEY (depositId) REFERENCES deposits(id);
-// `;
 
-// async function alterTable() {
-//     try {
-//         await query(alterSubscriptionsTable);
-//         console.log('subscriptions table altered successfully');
-//     } catch (error) {
-//         console.error('Error altering subscriptions table:', error);
-//         throw error;
-//     }
-// }
-
-// Call the function to create tables and alter the subscriptions table
-// createTables().then(() => {
-//     alterTable();
-// });
-
+createTables()
 const cryptoInvestmentService = {};
 
 cryptoInvestmentService.createCurrency = async (code, symbol, name) => {
@@ -386,72 +244,116 @@ cryptoInvestmentService.getAllCurrencies = async () => {
 };
 
 
-// Create a new wallet for a user
+// Helper function to generate a unique wallet address
+async function generateUniqueWalletAddress() {
+    let walletAddress;
+    let addressExists = true;
+
+    try {
+        do {
+            // Generate a random wallet address
+            walletAddress = crypto.randomBytes(16).toString('hex');
+
+            // Check if the generated address already exists in the database
+            const existingAddress = await query('SELECT id FROM wallets WHERE walletAddress = ?', [walletAddress]);
+
+            if (existingAddress.length === 0) {
+                addressExists = false;
+            }
+        } while (addressExists);
+
+        return {
+            message: 'Unique wallet address generated successfully',
+            walletAddress,
+        };
+    } catch (error) {
+        throw new Error(`Error generating wallet address: ${error.message}`);
+    }
+}
+
+
+
 cryptoInvestmentService.createWallet = async (userId, currencyId) => {
     try {
-        const insertQuery = 'INSERT INTO wallets (userId, currencyId) VALUES (?, ?)';
-        const result = await query(insertQuery, [userId, currencyId]);
+        // Set initial balance to 0.00
+        const balance = 0.00;
 
-        if (!result.insertId) {
-            throw new Error('Failed to create wallet');
-        }
+        // Generate a unique wallet address
+        const { walletAddress, message: generationMessage } = await generateUniqueWalletAddress();
 
-        return { message: 'Wallet created successfully', walletId: result.insertId };
+        // Insert the new wallet into the database
+        const queryStr = `
+            INSERT INTO wallets (userId, walletAddress, balance, currencyId)
+            VALUES (?, ?, ?, ?)
+        `;
+
+        const result = await query(queryStr, [userId, walletAddress, balance, currencyId]);
+
+        return {
+            success: true,
+            message: 'Wallet created successfully',
+            walletId: result.insertId,
+            walletAddress,
+            additionalInfo: generationMessage, // Include the generation message
+        };
     } catch (error) {
-        throw error;
+        return {
+            success: false,
+            message: `Error creating wallet: ${error.message}`,
+        };
     }
 };
 
-// Credit an investor's wallet
-// cryptoInvestmentService.creditWallet = async (walletId, amount) => {
-//     try {
-//         const updateQuery = 'UPDATE wallets SET balance = balance + ? WHERE id = ?';
-//         const result = await query(updateQuery, [amount, walletId]);
 
-//         if (result.affectedRows === 0) {
-//             throw new Error('Wallet not found');
+
+// cryptoInvestmentService.creditWallet = async (walletId, depositId, amount) => {
+//     try {
+//         // Step 1: Check the deposit by ID and status
+//         const depositQuery = 'SELECT amount, status FROM deposits WHERE walletId = ? AND id = ?';
+//         const depositResult = await query(depositQuery, [walletId, depositId]);
+
+//         if (depositResult.length === 0) {
+//             throw new Error('No deposit found for this wallet with the provided deposit ID.');
 //         }
 
-//         return { message: 'Wallet credited successfully' };
-//     } catch (error) {
-//         throw error;
-//     }
-// };
+//         const depositAmount = depositResult[0].amount;
+//         const depositStatus = depositResult[0].status;
 
-// cryptoInvestmentService.creditWallet = async (walletId, amount) => {
-//     try {
-//         // Step 1: Check if there are any deposits with 'accepted' status
-//         const depositQuery = 'SELECT SUM(amount) as totalDeposited FROM deposits WHERE walletId = ? AND status = "accepted"';
-//         const depositResult = await query(depositQuery, [walletId]);
-
-//         const totalDeposited = depositResult[0].totalDeposited || 0;
-
-//         if (totalDeposited === 0) {
-//             throw new Error('No accepted deposits found for this wallet.');
+//         // Step 2: Handle pending deposit status
+//         if (depositStatus === 'pending') {
+//             throw new Error('The deposit is still pending. Crediting the wallet is not allowed until the deposit is accepted.');
 //         }
 
-//         // Step 2: Check the total earnings from subscriptions
-//         const earningsQuery = 'SELECT SUM(earnings) as totalEarnings FROM subscriptions WHERE walletId = ?';
-//         const earningsResult = await query(earningsQuery, [walletId]);
+//         // Step 3: Check the total earnings for that specific subscription
+//         const earningsQuery = 'SELECT earnings FROM subscriptions WHERE walletId = ? AND depositId = ?';
+//         const earningsResult = await query(earningsQuery, [walletId, depositId]);
 
-//         const totalEarnings = earningsResult[0].totalEarnings || 0;
+//         const totalEarnings = earningsResult.length > 0 ? earningsResult[0].earnings : 0;
 
-//         // Step 3: Calculate the allowable amount for crediting
-//         const allowableAmount = totalDeposited + totalEarnings;
+//         // Step 4: Calculate the allowable amount for crediting
+//         const allowableAmount = depositAmount + totalEarnings;
 
 //         if (amount > allowableAmount) {
-//             throw new Error(`The amount exceeds the allowable limit. Maximum allowable credit is ${allowableAmount.toFixed(2)}, but tried to credit ${amount.toFixed(2)}.`);
+//             throw new Error(`The amount exceeds the allowable limit. 
+//             - Deposited Amount: ${depositAmount.toFixed(2)} 
+//             - Earnings from Subscription: ${totalEarnings.toFixed(2)} 
+//             - Maximum Allowable Credit: ${allowableAmount.toFixed(2)} 
+//             - Attempted Credit: ${amount.toFixed(2)}`);
 //         }
 
-//         // Step 4: Proceed with crediting the wallet
+//         // Step 5: Proceed with crediting the wallet
 //         const updateQuery = 'UPDATE wallets SET balance = balance + ? WHERE id = ?';
 //         const result = await query(updateQuery, [amount, walletId]);
 
 //         if (result.affectedRows === 0) {
-//             throw new Error('Wallet not found');
+//             throw new Error('Wallet not found.');
 //         }
 
-//         return { message: 'Wallet credited successfully', creditedAmount: amount, allowableAmount: allowableAmount.toFixed(2) };
+//         return { 
+//             message: 'Wallet credited successfully.', 
+//             creditedAmount: amount, 
+//             allowableAmount: allowableAmount.toFixed(2) 
+//         };
 //     } catch (error) {
 //         throw error;
 //     }
@@ -492,23 +394,1296 @@ cryptoInvestmentService.creditWallet = async (walletId, depositId, amount) => {
             - Attempted Credit: ${amount.toFixed(2)}`);
         }
 
-        // Step 5: Proceed with crediting the wallet
-        const updateQuery = 'UPDATE wallets SET balance = balance + ? WHERE id = ?';
-        const result = await query(updateQuery, [amount, walletId]);
+        // Step 5: Update wallet with the credited amount, depositId, and depositAmount
+        const updateQuery = `
+            UPDATE wallets 
+            SET balance = balance + ?, 
+                depositId = ?, 
+                depositAmount = ? 
+            WHERE id = ?
+        `;
+        const updateResult = await query(updateQuery, [amount, depositId, depositAmount, walletId]);
 
-        if (result.affectedRows === 0) {
+        if (updateResult.affectedRows === 0) {
             throw new Error('Wallet not found.');
         }
 
-        return { 
-            message: 'Wallet credited successfully.', 
-            creditedAmount: amount, 
-            allowableAmount: allowableAmount.toFixed(2) 
+        // Step 6: Fetch the new balance
+        const newBalanceQuery = 'SELECT balance FROM wallets WHERE id = ?';
+        const balanceResult = await query(newBalanceQuery, [walletId]);
+
+        if (balanceResult.length === 0) {
+            throw new Error('Failed to fetch the new wallet balance.');
+        }
+
+        const newBalance = balanceResult[0].balance;
+
+        // Step 7: Return detailed response including the updated balance, depositId, and depositAmount
+        return {
+            success: true,
+            message: 'Wallet credited successfully.',
+            walletId: walletId,
+            newBalance: newBalance.toFixed(2),
+            creditedAmount: amount.toFixed(2),
+            depositId: depositId,
+            depositAmount: depositAmount.toFixed(2),
+            allowableAmount: allowableAmount.toFixed(2)
         };
     } catch (error) {
-        throw error;
+        return {
+            success: false,
+            message: `Error crediting wallet: ${error.message}`
+        };
     }
 };
+
+
+cryptoInvestmentService.userWallet = async (currencyId) => {
+    try {
+        // SQL query to get wallet details along with the corresponding currency details
+        const queryStr = `
+            SELECT 
+                wallets.id AS walletId,
+                wallets.userId,
+                wallets.balance,
+                wallets.currencyId,
+                wallets.createdAt,
+                wallets.updatedAt,
+                currencies.code AS currencyCode,
+                currencies.symbol AS currencySymbol,
+                currencies.name AS currencyName,
+                CONCAT(users.firstName, ' ', users.lastName) AS cardHolderName
+            FROM 
+                wallets
+            INNER JOIN 
+                currencies ON wallets.currencyId = currencies.id
+            INNER JOIN 
+                users ON wallets.userId = users.id
+            WHERE 
+                wallets.currencyId = ?
+        `;
+
+        // Execute the query with the provided currencyId
+        const result = await query(queryStr, [currencyId]);
+
+        // Check if any results were returned
+        if (result.length === 0) {
+            return { message: 'No wallets found for the provided currency ID' };
+        }
+
+        // Return the wallet, currency details, and cardholder's name
+        return {
+            message: 'Wallet details retrieved successfully',
+            data: result,
+        };
+    } catch (error) {
+        // Handle errors gracefully
+        throw new Error(`Error retrieving wallet details: ${error.message}`);
+    }
+};
+
+
+
+
+cryptoInvestmentService.getTransactionHistory = async (walletId) => {
+    try {
+        const queryStr = `
+            SELECT 
+                transactions.id AS transactionId,
+                transactions.type,
+                transactions.amount,
+                transactions.status,
+                transactions.createdAt,
+                currencies.code AS currencyCode,
+                currencies.symbol AS currencySymbol
+            FROM 
+                transactions
+            INNER JOIN 
+                currencies ON transactions.currencyId = currencies.id
+            WHERE 
+                transactions.walletId = ?
+            ORDER BY 
+                transactions.createdAt DESC
+        `;
+        const result = await query(queryStr, [walletId]);
+
+        return {
+            message: 'Transaction history retrieved successfully',
+            data: result,
+            success: true,
+        };
+    } catch (error) {
+        return {
+            message: `Error retrieving transaction history: ${error.message}`,
+            success: false,
+        };
+    }
+};
+
+
+cryptoInvestmentService.getUserWalletsAndSubscriptions = async (userId) => {
+    try {
+        // Query to get user, wallet, currency, subscription, and subscription plan details
+        const queryStr = `
+            SELECT 
+                users.id AS userId,
+                users.firstName,
+                users.lastName,
+                users.email,
+                users.phone,
+                wallets.id AS walletId,
+                wallets.walletAddress,
+                wallets.balance,
+                currencies.id AS currencyId,
+                currencies.name AS currencyName,
+                currencies.symbol,
+                subscriptions.id AS subscriptionId,
+                subscriptions.startDate AS subscriptionStartDate,
+                subscriptions.endDate AS subscriptionEndDate,
+                subscription_plans.id AS planId,
+                subscription_plans.name AS planName,
+                subscription_plans.price AS planPrice,
+                subscription_plans.duration AS planDuration
+            FROM users
+            LEFT JOIN wallets ON wallets.userId = users.id
+            LEFT JOIN currencies ON wallets.currencyId = currencies.id
+            LEFT JOIN subscriptions ON subscriptions.userId = users.id
+            LEFT JOIN subscription_plans ON subscriptions.planId = subscription_plans.id
+            WHERE users.id = ?
+        `;
+
+        const results = await query(queryStr, [userId]);
+
+        if (results.length === 0) {
+            return {
+                success: false,
+                message: 'No user, wallet, or subscription details found for the given user ID'
+            };
+        }
+
+        // Assuming a user has only one wallet and one active subscription; handle multiple wallets and subscriptions if needed
+        const userDetails = results[0];
+
+        // Structure the response data
+        const user = {
+            id: userDetails.userId,
+            firstName: userDetails.firstName,
+            lastName: userDetails.lastName,
+            email: userDetails.email,
+            phone: userDetails.phone
+        };
+
+        const wallet = {
+            walletId: userDetails.walletId,
+            walletAddress: userDetails.walletAddress,
+            balance: userDetails.balance
+        };
+
+        const currency = {
+            currencyId: userDetails.currencyId,
+            currencyName: userDetails.currencyName,
+            symbol: userDetails.symbol
+        };
+
+        const subscription = {
+            subscriptionId: userDetails.subscriptionId,
+            startDate: userDetails.subscriptionStartDate,
+            endDate: userDetails.subscriptionEndDate
+        };
+
+        const subscriptionPlan = {
+            planId: userDetails.planId,
+            planName: userDetails.planName,
+            planPrice: userDetails.planPrice,
+            planDuration: userDetails.planDuration
+        };
+
+        return {
+            success: true,
+            message: 'User, wallet, and subscription details retrieved successfully',
+            user,
+            wallet,
+            currency,
+            subscription,
+            subscriptionPlan
+        };
+    } catch (error) {
+        console.error('Error fetching user wallet and subscription details:', error);
+        throw new Error('Error fetching user wallet and subscription details');
+    }
+};
+
+
+// Service to fetch user, wallet, and currency details by User ID
+cryptoInvestmentService.getUserWalletDetails = async(userId)=> {
+    try {
+        const queryStr = `
+            SELECT 
+                users.id AS userId,
+                users.firstName,
+                users.lastName,
+                users.email,
+                users.phone,
+                wallets.id AS walletId,
+                wallets.walletAddress,
+                wallets.balance,
+                currencies.id AS currencyId,
+                currencies.name AS currencyName,
+                currencies.symbol
+            FROM users
+            LEFT JOIN wallets ON wallets.userId = users.id
+            LEFT JOIN currencies ON wallets.currencyId = currencies.id
+            WHERE users.id = ?
+        `;
+
+        const results = await query(queryStr, [userId]);
+
+        if (results.length === 0) {
+            return {
+                success: false,
+                message: 'No user or wallet found for the given user ID'
+            };
+        }
+
+        const userWalletDetails = results[0];
+
+        return {
+            success: true,
+            message: 'User and wallet details retrieved successfully',
+            user: {
+                id: userWalletDetails.userId,
+                firstName: userWalletDetails.firstName,
+                lastName: userWalletDetails.lastName,
+                email: userWalletDetails.email,
+                phone: userWalletDetails.phone
+            },
+            wallet: {
+                walletId: userWalletDetails.walletId,
+                walletAddress: userWalletDetails.walletAddress,
+                balance: userWalletDetails.balance,
+                currency: {
+                    currencyId: userWalletDetails.currencyId,
+                    currencyName: userWalletDetails.currencyName,
+                    symbol: userWalletDetails.symbol
+                }
+            }
+        };
+    } catch (error) {
+        console.error('Error retrieving user wallet details:', error);
+        return {
+            success: false,
+            message: `Failed to retrieve user wallet details: ${error.message}`
+        };
+    }
+}
+
+
+// cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId, currencyFilter) => {
+//     try {
+//         // Query to select user details
+//         const userQuery = `
+//             SELECT 
+//                 id AS userId,
+//                 firstName,
+//                 lastName,
+//                 email,
+//                 phone
+//             FROM 
+//                 users
+//             WHERE 
+//                 id = ?
+//         `;
+        
+//         const userResult = await query(userQuery, [userId]);
+        
+//         if (userResult.length === 0) {
+//             return {
+//                 success: false,
+//                 message: 'User not found'
+//             };
+//         }
+
+//         const userDetails = userResult[0];
+
+//         // Base SQL query to select all wallet details for the user
+//         let walletQuery = `
+//             SELECT 
+//                 wallets.id AS walletId,
+//                 wallets.walletAddress,
+//                 wallets.balance,
+//                 wallets.currencyId,
+//                 currencies.code AS currencyCode,
+//                 currencies.symbol AS currencySymbol,
+//                 currencies.name AS currencyName
+//             FROM 
+//                 wallets
+//             INNER JOIN 
+//                 currencies ON wallets.currencyId = currencies.id
+//             WHERE 
+//                 wallets.userId = ?
+//         `;
+
+//         const walletParams = [userId];
+
+//         // Filter by currency ID, code, or name if applicable
+//         if (currencyFilter) {
+//             if (currencyFilter.currencyId) {
+//                 walletQuery += ' AND wallets.currencyId = ?';
+//                 walletParams.push(currencyFilter.currencyId);
+//             } 
+//             if (currencyFilter.currencyCode) {
+//                 walletQuery += ' AND currencies.code = ?';
+//                 walletParams.push(currencyFilter.currencyCode);
+//             } 
+//             if (currencyFilter.currencyName) {
+//                 walletQuery += ' AND currencies.name = ?';
+//                 walletParams.push(currencyFilter.currencyName);
+//             }
+//         }
+
+//         const walletResults = await query(walletQuery, walletParams);
+
+//         // Query to select all subscription details for the user
+//         const subscriptionQuery = `
+//             SELECT 
+//                 subscriptions.planId AS subscriptionPlanId,
+//                 subscription_plans.label AS subscriptionPlanName,
+//                 subscriptions.startDate AS subscriptionStartDate,
+//                 subscriptions.endDate AS subscriptionEndDate
+//             FROM 
+//                 subscriptions
+//             LEFT JOIN 
+//                 subscription_plans ON subscriptions.planId = subscription_plans.id
+//             WHERE 
+//                 subscriptions.userId = ?
+//         `;
+
+//         const subscriptionResults = await query(subscriptionQuery, [userId]);
+
+//         // Construct response based on the results
+//         const response = {
+//             success: true,
+//             message: 'User, wallet, and subscription details retrieved successfully',
+//             data: {
+//                 user: userDetails,
+//                 wallets: walletResults.length > 0 ? walletResults : null,
+//                 subscriptions: subscriptionResults.length > 0 ? subscriptionResults : null
+//             }
+//         };
+
+//         return response;
+//     } catch (error) {
+//         console.error('Error retrieving user wallet details:', error);
+//         return {
+//             success: false,
+//             message: `Failed to retrieve user wallet details: ${error.message}`
+//         };
+//     }
+// };
+
+// cryptoInvestmentService.js
+
+
+// cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId) => {
+//     try {
+//         // SQL query to fetch user details, wallets, and subscriptions
+//         const queryStr = `
+//             SELECT 
+//                 u.id AS userId,
+//                 u.firstName,
+//                 u.lastName,
+//                 u.email,
+//                 u.phone,
+//                 w.id AS walletId,
+//                 w.walletAddress,
+//                 w.balance,
+//                 w.currencyId,
+//                 c.code AS currencyCode,
+//                 c.symbol AS currencySymbol,
+//                 c.name AS currencyName,
+//                 s.planId AS subscriptionPlanId,
+//                 sp.label AS subscriptionPlanName,
+//                 s.startDate AS subscriptionStartDate,
+//                 s.endDate AS subscriptionEndDate
+//             FROM 
+//                 users u
+//             LEFT JOIN 
+//                 wallets w ON u.id = w.userId
+//             LEFT JOIN 
+//                 currencies c ON w.currencyId = c.id
+//             LEFT JOIN 
+//                 subscriptions s ON u.id = s.userId
+//             LEFT JOIN 
+//                 subscription_plans sp ON s.planId = sp.id
+//             WHERE 
+//                 u.id = ?;
+//         `;
+
+//         const results = await query(queryStr, [userId]);
+
+//         // Check if any results were returned
+//         if (results.length === 0) {
+//             return {
+//                 success: false,
+//                 message: 'No details found for the given user ID'
+//             };
+//         }
+
+//         // Organize results into user, wallets, and subscriptions
+//         const user = {
+//             id: results[0].userId,
+//             firstName: results[0].firstName,
+//             lastName: results[0].lastName,
+//             email: results[0].email,
+//             phone: results[0].phone
+//         };
+
+//         const wallets = [];
+//         const subscriptions = [];
+
+//         results.forEach(row => {
+//             if (row.walletId) {
+//                 wallets.push({
+//                     walletId: row.walletId,
+//                     walletAddress: row.walletAddress,
+//                     balance: row.balance,
+//                     currency: {
+//                         currencyId: row.currencyId,
+//                         currencyName: row.currencyName,
+//                         symbol: row.currencySymbol
+//                     }
+//                 });
+//             }
+//             if (row.subscriptionPlanId) {
+//                 subscriptions.push({
+//                     planId: row.subscriptionPlanId,
+//                     planName: row.subscriptionPlanName,
+//                     startDate: row.subscriptionStartDate,
+//                     endDate: row.subscriptionEndDate,
+//                     currency: {
+//                         currencyId: row.currencyId,
+//                         currencyCode: row.currencyCode,
+//                         symbol: row.currencySymbol,
+//                         currencyName: row.currencyName
+//                     }
+//                 });
+//             }
+//         });
+
+//         return {
+//             success: true,
+//             message: 'User, wallet, and subscription details retrieved successfully',
+//             data: {
+//                 user,
+//                 wallets,
+//                 subscriptions
+//             }
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving user details:', error);
+//         return {
+//             success: false,
+//             message: `Failed to retrieve user details: ${error.message}`
+//         };
+//     }
+// };
+
+
+// cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId) => {
+//     try {
+//         // SQL query to fetch user details, wallets, and subscriptions
+//         const queryStr = `
+//             SELECT 
+//                 u.id AS userId,
+//                 u.firstName,
+//                 u.lastName,
+//                 u.email,
+//                 u.phone,
+//                 w.id AS walletId,
+//                 w.walletAddress,
+//                 w.balance,
+//                 w.currencyId,
+//                 c.name AS currencyName,
+//                 c.symbol AS currencySymbol,
+//                 s.planId AS subscriptionPlanId,
+//                 sp.label AS subscriptionPlanName,
+//                 s.startDate AS subscriptionStartDate,
+//                 s.endDate AS subscriptionEndDate
+//             FROM 
+//                 users u
+//             LEFT JOIN 
+//                 wallets w ON u.id = w.userId
+//             LEFT JOIN 
+//                 currencies c ON w.currencyId = c.id
+//             LEFT JOIN 
+//                 subscriptions s ON u.id = s.userId
+//             LEFT JOIN 
+//                 subscription_plans sp ON s.planId = sp.id
+//             WHERE 
+//                 u.id = ?;
+//         `;
+
+//         const results = await query(queryStr, [userId]);
+
+//         // Check if any results were returned
+//         if (results.length === 0) {
+//             return {
+//                 success: false,
+//                 message: 'No details found for the given user ID'
+//             };
+//         }
+
+//         // Organize results into user, wallets, and subscriptions
+//         const user = {
+//             id: results[0].userId,
+//             firstName: results[0].firstName,
+//             lastName: results[0].lastName,
+//             email: results[0].email,
+//             phone: results[0].phone
+//         };
+
+//         const wallets = {};
+//         const subscriptions = {};
+
+//         results.forEach(row => {
+//             if (row.walletId) {
+//                 const planKey = row.subscriptionPlanName || 'No Plan';
+//                 if (!wallets[planKey]) {
+//                     wallets[planKey] = [];
+//                 }
+//                 wallets[planKey].push({
+//                     walletId: row.walletId,
+//                     walletAddress: row.walletAddress,
+//                     balance: row.balance,
+//                     currency: {
+//                         currencyName: row.currencyName,
+//                         symbol: row.currencySymbol
+//                     }
+//                 });
+//             }
+
+//             if (row.subscriptionPlanId) {
+//                 const planKey = row.subscriptionPlanName || 'No Plan';
+//                 if (!subscriptions[planKey]) {
+//                     subscriptions[planKey] = [];
+//                 }
+//                 subscriptions[planKey].push({
+//                     planId: row.subscriptionPlanId,
+//                     planName: row.subscriptionPlanName,
+//                     startDate: row.subscriptionStartDate,
+//                     endDate: row.subscriptionEndDate,
+//                     currency: {
+//                         currencyName: row.currencyName,
+//                         symbol: row.currencySymbol
+//                     }
+//                 });
+//             }
+//         });
+
+//         return {
+//             success: true,
+//             message: 'User, wallet, and subscription details retrieved successfully',
+//             data: {
+//                 user,
+//                 wallets,
+//                 subscriptions
+//             }
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving user details:', error);
+//         return {
+//             success: false,
+//             message: `Failed to retrieve user details: ${error.message}`
+//         };
+//     }
+// };
+
+// cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId) => {
+//     try {
+//         const queryStr = `
+//             SELECT 
+//                 u.id AS userId,
+//                 u.firstName,
+//                 u.lastName,
+//                 u.email,
+//                 u.phone,
+//                 w.id AS walletId,
+//                 w.walletAddress,
+//                 w.balance,
+//                 w.depositId,
+//                 d.amount AS depositAmount,
+//                 c.name AS currencyName,
+//                 c.symbol AS currencySymbol,
+//                 s.id AS subscriptionId,
+//                 sp.label AS subscriptionPlanName,
+//                 sp.duration AS subscriptionDuration,
+//                 sp.minInvest AS subscriptionMinInvest,
+//                 sp.maxInvest AS subscriptionMaxInvest,
+//                 s.startDate AS subscriptionStartDate,
+//                 s.endDate AS subscriptionEndDate,
+//                 s.totalAmount AS subscriptionTotalAmount,
+//                 s.dailyInterestGain,
+//                 s.totalInterest
+//             FROM 
+//                 users u
+//             LEFT JOIN 
+//                 wallets w ON u.id = w.userId
+//             LEFT JOIN 
+//                 currencies c ON w.currencyId = c.id
+//             LEFT JOIN 
+//                 deposits d ON w.depositId = d.id  -- Fetching deposit details
+//             LEFT JOIN 
+//                 subscriptions s ON w.id = s.walletId
+//             LEFT JOIN 
+//                 subscription_plans sp ON s.planId = sp.id
+//             WHERE 
+//                 u.id = ?;
+//         `;
+
+//         const results = await query(queryStr, [userId]);
+
+//         if (results.length === 0) {
+//             return {
+//                 success: false,
+//                 message: 'No details found for the given user ID'
+//             };
+//         }
+
+//         const user = {
+//             id: results[0].userId,
+//             firstName: results[0].firstName,
+//             lastName: results[0].lastName,
+//             email: results[0].email,
+//             phone: results[0].phone
+//         };
+
+//         const wallets = {};
+//         const subscriptions = {};
+
+//         results.forEach(row => {
+//             if (row.walletId) {
+//                 if (!wallets[row.walletId]) {
+//                     wallets[row.walletId] = {
+//                         walletAddress: row.walletAddress,
+//                         balance: row.balance,
+//                         currency: {
+//                             name: row.currencyName,
+//                             symbol: row.currencySymbol
+//                         },
+//                         deposit: {
+//                             depositId: row.depositId,
+//                             amount: row.depositAmount
+//                         }
+//                     };
+//                 }
+//             }
+
+//             if (row.subscriptionId) {
+//                 const planKey = row.subscriptionPlanName || 'No Plan';
+//                 if (!subscriptions[planKey]) {
+//                     subscriptions[planKey] = [];
+//                 }
+
+//                 subscriptions[planKey].push({
+//                     planName: row.subscriptionPlanName,
+//                     duration: row.subscriptionDuration,
+//                     minInvest: row.subscriptionMinInvest,
+//                     maxInvest: row.subscriptionMaxInvest,
+//                     startDate: row.subscriptionStartDate,
+//                     endDate: row.subscriptionEndDate,
+//                     totalAmount: row.subscriptionTotalAmount,
+//                     dailyInterestGain: row.dailyInterestGain,
+//                     totalInterest: row.totalInterest
+//                 });
+//             }
+//         });
+
+//         return {
+//             success: true,
+//             message: 'User, wallet, and subscription details retrieved successfully',
+//             data: {
+//                 user,
+//                 wallets,
+//                 subscriptions
+//             }
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving user details:', error);
+//         return {
+//             success: false,
+//             message: `Failed to retrieve user details: ${error.message}`
+//         };
+//     }
+// };
+
+
+
+// cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId) => {
+//     try {
+//         // SQL query to fetch user details, wallets, subscriptions, and deposits
+//         const queryStr = `
+//             SELECT 
+//                 u.id AS userId,
+//                 u.firstName,
+//                 u.lastName,
+//                 u.email,
+//                 u.phone,
+//                 w.id AS walletId,
+//                 w.walletAddress,
+//                 w.balance,
+//                 w.depositId,
+//                 w.depositAmount,
+//                 c.name AS currencyName,
+//                 c.symbol AS currencySymbol,
+//                 s.planId AS subscriptionPlanId,
+//                 sp.label AS subscriptionPlanName,
+//                 s.startDate AS subscriptionStartDate,
+//                 s.endDate AS subscriptionEndDate
+//             FROM 
+//                 users u
+//             LEFT JOIN 
+//                 wallets w ON u.id = w.userId
+//             LEFT JOIN 
+//                 currencies c ON w.currencyId = c.id
+//             LEFT JOIN 
+//                 subscriptions s ON u.id = s.userId
+//             LEFT JOIN 
+//                 subscription_plans sp ON s.planId = sp.id
+//             LEFT JOIN 
+//                 deposits d ON w.depositId = d.id
+//             WHERE 
+//                 u.id = ?;
+//         `;
+
+//         const results = await query(queryStr, [userId]);
+
+//         // Check if any results were returned
+//         if (results.length === 0) {
+//             return {
+//                 success: false,
+//                 message: 'No details found for the given user ID'
+//             };
+//         }
+
+//         // Initialize the user data object
+//         const user = {
+//             id: results[0].userId,
+//             firstName: results[0].firstName,
+//             lastName: results[0].lastName,
+//             email: results[0].email,
+//             phone: results[0].phone
+//         };
+
+//         // Initialize structures to hold wallet and subscription details
+//         const wallets = {};
+//         const subscriptions = {};
+
+//         // Iterate through query results to populate wallet and subscription details
+//         results.forEach(row => {
+//             // Populate wallet details
+//             if (row.walletId) {
+//                 const planKey = row.subscriptionPlanName || 'No Plan';
+//                 if (!wallets[planKey]) {
+//                     wallets[planKey] = [];
+//                 }
+//                 wallets[planKey].push({
+//                     walletId: row.walletId,
+//                     walletAddress: row.walletAddress,
+//                     balance: row.balance,
+//                     deposit: {
+//                         depositId: row.depositId,
+//                         depositAmount: row.depositAmount
+//                     },
+//                     currency: {
+//                         currencyName: row.currencyName,
+//                         symbol: row.currencySymbol
+//                     }
+//                 });
+//             }
+
+//             // Populate subscription details
+//             if (row.subscriptionPlanId) {
+//                 const planKey = row.subscriptionPlanName || 'No Plan';
+//                 if (!subscriptions[planKey]) {
+//                     subscriptions[planKey] = [];
+//                 }
+//                 subscriptions[planKey].push({
+//                     planId: row.subscriptionPlanId,
+//                     planName: row.subscriptionPlanName,
+//                     startDate: row.subscriptionStartDate,
+//                     endDate: row.subscriptionEndDate,
+//                     currency: {
+//                         currencyName: row.currencyName,
+//                         symbol: row.currencySymbol
+//                     }
+//                 });
+//             }
+//         });
+
+//         return {
+//             success: true,
+//             message: 'User, wallet, deposit, and subscription details retrieved successfully',
+//             data: {
+//                 user,
+//                 wallets,
+//                 subscriptions
+//             }
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving user details:', error);
+//         return {
+//             success: false,
+//             message: `Failed to retrieve user details: ${error.message}`
+//         };
+//     }
+// };
+
+
+// cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId) => {
+//     try {
+//         // SQL query to fetch user details, wallets, subscriptions, deposits, and plan details
+//         const queryStr = `
+//             SELECT 
+//                 u.id AS userId,
+//                 u.firstName,
+//                 u.lastName,
+//                 u.email,
+//                 u.phone,
+//                 w.id AS walletId,
+//                 w.walletAddress,
+//                 w.balance,
+//                 w.depositId AS walletDepositId,
+//                 w.depositAmount AS walletDepositAmount,
+//                 c.name AS currencyName,
+//                 c.symbol AS currencySymbol,
+//                 s.planId AS subscriptionPlanId,
+//                 sp.label AS subscriptionPlanName,
+//                 sp.duration AS subscriptionDuration,
+//                 sp.minInvest AS subscriptionMinInvest,
+//                 sp.maxInvest AS subscriptionMaxInvest,
+//                 sp.rate AS subscriptionRate,
+//                 s.startDate AS subscriptionStartDate,
+//                 s.endDate AS subscriptionEndDate,
+//                 s.totalAmount AS subscriptionTotalAmount,
+//                 s.dailyInterestGain,
+//                 s.totalInterest,
+//                 d.id AS depositId,
+//                 d.amount AS depositAmount,
+//                 d.proofOfPayment AS depositProofOfPayment,
+//                 d.status AS depositStatus
+//             FROM 
+//                 users u
+//             LEFT JOIN 
+//                 wallets w ON u.id = w.userId
+//             LEFT JOIN 
+//                 currencies c ON w.currencyId = c.id
+//             LEFT JOIN 
+//                 subscriptions s ON w.id = s.walletId
+//             LEFT JOIN 
+//                 subscription_plans sp ON s.planId = sp.id
+//             LEFT JOIN 
+//                 deposits d ON s.depositId = d.id
+//             WHERE 
+//                 u.id = ?;
+//         `;
+
+//         const results = await query(queryStr, [userId]);
+
+//         // Check if any results were returned
+//         if (results.length === 0) {
+//             return {
+//                 success: false,
+//                 message: 'No details found for the given user ID'
+//             };
+//         }
+
+//         // Initialize result structures
+//         const user = {
+//             id: results[0].userId,
+//             firstName: results[0].firstName,
+//             lastName: results[0].lastName,
+//             email: results[0].email,
+//             phone: results[0].phone
+//         };
+
+//         const wallets = {};
+//         const subscriptions = {};
+//         const deposits = {};
+
+//         results.forEach(row => {
+//             // Process wallet data
+//             if (row.walletId) {
+//                 const planKey = row.subscriptionPlanName || 'No Plan';
+//                 if (!wallets[planKey]) {
+//                     wallets[planKey] = [];
+//                 }
+//                 wallets[planKey].push({
+//                     walletId: row.walletId,
+//                     walletAddress: row.walletAddress,
+//                     balance: row.balance,
+//                     deposit: {
+//                         depositId: row.walletDepositId || null,
+//                         depositAmount: row.walletDepositAmount || 0.00
+//                     },
+//                     currency: {
+//                         currencyName: row.currencyName,
+//                         symbol: row.currencySymbol
+//                     }
+//                 });
+//             }
+
+//             // Process subscription data
+//             if (row.subscriptionPlanId) {
+//                 const planKey = row.subscriptionPlanName || 'No Plan';
+//                 if (!subscriptions[planKey]) {
+//                     subscriptions[planKey] = [];
+//                 }
+//                 subscriptions[planKey].push({
+//                     planId: row.subscriptionPlanId,
+//                     planName: row.subscriptionPlanName,
+//                     duration: row.subscriptionDuration,
+//                     minInvest: row.subscriptionMinInvest,
+//                     maxInvest: row.subscriptionMaxInvest,
+//                     rate: row.subscriptionRate,
+//                     startDate: row.subscriptionStartDate,
+//                     endDate: row.subscriptionEndDate,
+//                     totalAmount: row.subscriptionTotalAmount,
+//                     dailyInterestGain: row.dailyInterestGain,
+//                     totalInterest: row.totalInterest,
+//                     deposit: {
+//                         id: row.depositId || null,
+//                         amount: row.depositAmount || 0.00,
+//                         proofOfPayment: row.depositProofOfPayment || null,
+//                         status: row.depositStatus || 'pending'
+//                     },
+//                     currency: {
+//                         currencyName: row.currencyName,
+//                         symbol: row.currencySymbol
+//                     }
+//                 });
+//             }
+
+//             // Process deposit data
+//             if (row.depositId) {
+//                 deposits[row.depositId] = {
+//                     depositId: row.depositId,
+//                     amount: row.depositAmount,
+//                     proofOfPayment: row.depositProofOfPayment,
+//                     status: row.depositStatus
+//                 };
+//             }
+//         });
+
+//         return {
+//             success: true,
+//             message: 'User, wallet, deposit, and subscription details retrieved successfully',
+//             data: {
+//                 user,
+//                 wallets,
+//                 subscriptions,
+//                 deposits
+//             }
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving user details:', error);
+//         return {
+//             success: false,
+//             message: `Failed to retrieve user details: ${error.message}`
+//         };
+//     }
+// };
+
+
+cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId) => {
+    try {
+        // SQL query to fetch user details, wallets, subscriptions, deposits, and plan details
+        const queryStr = `
+            SELECT 
+                u.id AS userId,
+                u.firstName,
+                u.lastName,
+                u.email,
+                u.phone,
+                w.id AS walletId,
+                w.walletAddress,
+                w.balance,
+                w.depositId AS walletDepositId,
+                w.depositAmount AS walletDepositAmount,
+                s.currencyId AS subscriptionCurrencyId,
+                c.name AS subscriptionCurrencyName,
+                c.symbol AS subscriptionCurrencySymbol,
+                s.planId AS subscriptionPlanId,
+                sp.label AS subscriptionPlanName,
+                sp.duration AS subscriptionDuration,
+                sp.minInvest AS subscriptionMinInvest,
+                sp.maxInvest AS subscriptionMaxInvest,
+                sp.rate AS subscriptionRate,
+                s.startDate AS subscriptionStartDate,
+                s.endDate AS subscriptionEndDate,
+                s.totalAmount AS subscriptionTotalAmount,
+                s.dailyInterestGain,
+                s.totalInterest,
+                d.id AS depositId,
+                d.amount AS depositAmount,
+                d.proofOfPayment AS depositProofOfPayment,
+                d.status AS depositStatus
+            FROM 
+                users u
+            LEFT JOIN 
+                wallets w ON u.id = w.userId
+            LEFT JOIN 
+                subscriptions s ON w.id = s.walletId
+            LEFT JOIN 
+                subscription_plans sp ON s.planId = sp.id
+            LEFT JOIN 
+                deposits d ON s.depositId = d.id
+            LEFT JOIN 
+                currencies c ON s.currencyId = c.id  -- Join with currencies table for subscription currency details
+            WHERE 
+                u.id = ?;
+        `;
+
+        const results = await query(queryStr, [userId]);
+
+        // Check if any results were returned
+        if (results.length === 0) {
+            return {
+                success: false,
+                message: 'No details found for the given user ID'
+            };
+        }
+
+        // Initialize result structures
+        const user = {
+            id: results[0].userId,
+            firstName: results[0].firstName,
+            lastName: results[0].lastName,
+            email: results[0].email,
+            phone: results[0].phone
+        };
+
+        const wallets = {};
+        const subscriptions = {};
+        const deposits = {};
+
+        results.forEach(row => {
+            // Process wallet data
+            if (row.walletId) {
+                const planKey = row.subscriptionPlanName || 'No Plan';
+                if (!wallets[planKey]) {
+                    wallets[planKey] = [];
+                }
+                wallets[planKey].push({
+                    walletId: row.walletId,
+                    walletAddress: row.walletAddress,
+                    balance: row.balance,
+                    deposit: {
+                        depositId: row.walletDepositId || null,
+                        depositAmount: row.walletDepositAmount || 0.00
+                    }
+                });
+            }
+
+            // Process subscription data
+            if (row.subscriptionPlanId) {
+                const planKey = row.subscriptionPlanName || 'No Plan';
+                if (!subscriptions[planKey]) {
+                    subscriptions[planKey] = [];
+                }
+                subscriptions[planKey].push({
+                    planId: row.subscriptionPlanId,
+                    planName: row.subscriptionPlanName,
+                    duration: row.subscriptionDuration,
+                    minInvest: row.subscriptionMinInvest,
+                    maxInvest: row.subscriptionMaxInvest,
+                    rate: row.subscriptionRate,
+                    startDate: row.subscriptionStartDate,
+                    endDate: row.subscriptionEndDate,
+                    totalAmount: row.subscriptionTotalAmount,
+                    dailyInterestGain: row.dailyInterestGain,
+                    totalInterest: row.totalInterest,
+                    deposit: {
+                        id: row.depositId || null,
+                        amount: row.depositAmount || 0.00,
+                        proofOfPayment: row.depositProofOfPayment || null,
+                        status: row.depositStatus || 'pending'
+                    },
+                    currency: {
+                        currencyName: row.subscriptionCurrencyName,
+                        symbol: row.subscriptionCurrencySymbol
+                    }
+                });
+            }
+
+            // Process deposit data
+            if (row.depositId) {
+                deposits[row.depositId] = {
+                    depositId: row.depositId,
+                    amount: row.depositAmount,
+                    proofOfPayment: row.depositProofOfPayment,
+                    status: row.depositStatus
+                };
+            }
+        });
+
+        return {
+            success: true,
+            message: 'User, wallet, deposit, and subscription details retrieved successfully',
+            data: {
+                user,
+                wallets,
+                subscriptions,
+                deposits
+            }
+        };
+    } catch (error) {
+        console.error('Error retrieving user details:', error);
+        return {
+            success: false,
+            message: `Failed to retrieve user details: ${error.message}`
+        };
+    }
+};
+
+
+
+
+
+
+// cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails = async (userId) => {
+//     try {
+//         // SQL query to fetch user details, wallets, subscriptions, and deposits
+//         const queryStr = `
+//             SELECT 
+//                 u.id AS userId,
+//                 u.firstName,
+//                 u.lastName,
+//                 u.email,
+//                 u.phone,
+//                 w.id AS walletId,
+//                 w.walletAddress,
+//                 w.balance,
+//                 w.depositId AS walletDepositId,
+//                 w.depositAmount AS walletDepositAmount,
+//                 c.name AS currencyName,
+//                 c.symbol AS currencySymbol,
+//                 s.planId AS subscriptionPlanId,
+//                 sp.label AS subscriptionPlanName,
+//                 s.startDate AS subscriptionStartDate,
+//                 s.endDate AS subscriptionEndDate,
+//                 d.id AS depositId,
+//                 d.amount AS depositAmount,
+//                 d.proofOfPayment AS depositProofOfPayment,
+//                 d.status AS depositStatus
+//             FROM 
+//                 users u
+//             LEFT JOIN 
+//                 wallets w ON u.id = w.userId
+//             LEFT JOIN 
+//                 currencies c ON w.currencyId = c.id
+//             LEFT JOIN 
+//                 subscriptions s ON u.id = s.userId AND w.id = s.walletId
+//             LEFT JOIN 
+//                 subscription_plans sp ON s.planId = sp.id
+//             LEFT JOIN 
+//                 deposits d ON w.depositId = d.id
+//             WHERE 
+//                 u.id = ?;
+//         `;
+
+//         const results = await query(queryStr, [userId]);
+
+//         // Check if any results were returned
+//         if (results.length === 0) {
+//             return {
+//                 success: false,
+//                 message: 'No details found for the given user ID'
+//             };
+//         }
+
+//         // Organize results into user, wallets, and subscriptions
+//         const user = {
+//             id: results[0].userId,
+//             firstName: results[0].firstName,
+//             lastName: results[0].lastName,
+//             email: results[0].email,
+//             phone: results[0].phone
+//         };
+
+//         const wallets = {};
+//         const subscriptions = {};
+//         const deposits = {};
+
+//         results.forEach(row => {
+//             // Aggregate wallet details
+//             if (row.walletId) {
+//                 if (!wallets[row.walletId]) {
+//                     wallets[row.walletId] = {
+//                         walletId: row.walletId,
+//                         walletAddress: row.walletAddress,
+//                         balance: row.balance,
+//                         deposit: {
+//                             depositId: row.walletDepositId || null,
+//                             depositAmount: row.walletDepositAmount || 0.00
+//                         },
+//                         currency: {
+//                             currencyName: row.currencyName,
+//                             symbol: row.currencySymbol
+//                         },
+//                         subscriptions: []
+//                     };
+//                 }
+
+//                 // Add subscription details if present
+//                 if (row.subscriptionPlanId) {
+//                     wallets[row.walletId].subscriptions.push({
+//                         planId: row.subscriptionPlanId,
+//                         planName: row.subscriptionPlanName,
+//                         startDate: row.subscriptionStartDate,
+//                         endDate: row.subscriptionEndDate,
+//                         currency: {
+//                             currencyName: row.currencyName,
+//                             symbol: row.currencySymbol
+//                         }
+//                     });
+//                 }
+//             }
+
+//             // Aggregate deposits details
+//             if (row.depositId) {
+//                 deposits[row.depositId] = {
+//                     depositId: row.depositId,
+//                     amount: row.depositAmount,
+//                     proofOfPayment: row.depositProofOfPayment,
+//                     status: row.depositStatus
+//                 };
+//             }
+//         });
+
+//         // Convert wallets object to an array of values for better readability
+//         const walletArray = Object.values(wallets);
+
+//         return {
+//             success: true,
+//             message: 'User, wallet, deposit, and subscription details retrieved successfully',
+//             data: {
+//                 user,
+//                 wallets: walletArray,
+//                 deposits
+//             }
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving user details:', error);
+//         return {
+//             success: false,
+//             message: `Failed to retrieve user details: ${error.message}`
+//         };
+//     }
+// };
+
+
+
+
 
 
 // Request a deposit with proof of payment
@@ -528,25 +1703,6 @@ cryptoInvestmentService.requestDeposit = async (walletId, amount, currencyId, pr
 };
 
 // Admin function to approve or reject a deposit request
-// cryptoInvestmentService.updateDepositStatus = async (depositId, status) => {
-//     try {
-//         const validStatuses = ['pending', 'accepted', 'rejected'];
-//         if (!validStatuses.includes(status)) {
-//             throw new Error('Invalid status');
-//         }
-
-//         const updateQuery = 'UPDATE deposits SET status = ? WHERE id = ?';
-//         const result = await query(updateQuery, [status, depositId]);
-
-//         if (result.affectedRows === 0) {
-//             throw new Error('Deposit request not found');
-//         }
-
-//         return { message: 'Deposit status updated successfully' };
-//     } catch (error) {
-//         throw error;
-//     }
-// };
 
 cryptoInvestmentService.updateDepositStatus = async (depositId, status) => {
     try {
@@ -594,6 +1750,362 @@ cryptoInvestmentService.updateDepositStatus = async (depositId, status) => {
 };
 
 
+// cryptoInvestmentService.updateDepositStatusCreditWalletAndApproval = async (depositId, status) => {
+//     try {
+//         // Step 1: Check if the deposit exists and retrieve its details
+//         const depositQuery = 'SELECT walletId, amount, status FROM deposits WHERE id = ?';
+//         const depositResult = await query(depositQuery, [depositId]);
+
+//         if (depositResult.length === 0) {
+//             throw new Error('Deposit not found.');
+//         }
+
+//         const deposit = depositResult[0];
+//         const { walletId, amount, status: currentStatus } = deposit;
+
+//         // Step 2: Check if the current status is already 'accepted'
+//         if (currentStatus === 'accepted') {
+//             return {
+//                 success: false,
+//                 message: 'Deposit is already accepted and wallet credited.',
+//             };
+//         }
+
+//         // Step 3: If the status is 'rejected', delete the deposit
+//         if (status === 'rejected') {
+//             const deleteQuery = 'DELETE FROM deposits WHERE id = ?';
+//             const deleteResult = await query(deleteQuery, [depositId]);
+
+//             if (deleteResult.affectedRows === 0) {
+//                 throw new Error('Failed to delete the rejected deposit.');
+//             }
+
+//             return {
+//                 success: true,
+//                 message: 'Deposit rejected and deleted successfully.',
+//             };
+//         }
+
+//         // Step 4: If the status is 'accepted', proceed to credit the wallet
+//         if (status === 'accepted') {
+//             // Update the deposit status to 'accepted'
+//             const updateQuery = 'UPDATE deposits SET status = ? WHERE id = ?';
+//             const updateResult = await query(updateQuery, [status, depositId]);
+
+//             if (updateResult.affectedRows === 0) {
+//                 throw new Error('Failed to update deposit status to accepted.');
+//             }
+
+//             // Call the creditWallet method to credit the user's wallet
+//             const creditResponse = await cryptoInvestmentService.creditWallet(walletId, depositId, amount);
+
+//             if (creditResponse.success) {
+//                 return {
+//                     success: true,
+//                     message: 'Deposit status updated to accepted and wallet credited successfully.',
+//                 };
+//             } else {
+//                 throw new Error(`Wallet credit failed: ${creditResponse.message}`);
+//             }
+//         }
+
+//         // If the status is neither 'accepted' nor 'rejected', handle as invalid
+//         return {
+//             success: false,
+//             message: 'Invalid status update requested. Only "accepted" or "rejected" statuses are allowed.',
+//         };
+
+//     } catch (error) {
+//         return {
+//             success: false,
+//             message: `Error updating deposit status: ${error.message}`,
+//         };
+//     }
+// };
+
+
+// cryptoInvestmentService.updateDepositStatusCreditWalletAndApproval = async (depositId, status) => {
+//     try {
+//         // Step 1: Check if the deposit exists and retrieve its details
+//         const depositQuery = 'SELECT walletId, amount, status FROM deposits WHERE id = ?';
+//         const depositResult = await query(depositQuery, [depositId]);
+
+//         if (depositResult.length === 0) {
+//             throw new Error('Deposit not found.');
+//         }
+
+//         const deposit = depositResult[0];
+//         const { walletId, amount, status: currentStatus } = deposit;
+
+//         // Step 2: Check if the current status is already 'accepted'
+//         if (currentStatus === 'accepted') {
+//             return {
+//                 success: false,
+//                 message: 'Deposit is already accepted and wallet credited.',
+//             };
+//         }
+
+//         // Step 3: If the status is 'rejected', delete the deposit
+//         if (status === 'rejected') {
+//             const deleteQuery = 'DELETE FROM deposits WHERE id = ?';
+//             const deleteResult = await query(deleteQuery, [depositId]);
+
+//             if (deleteResult.affectedRows === 0) {
+//                 throw new Error('Failed to delete the rejected deposit.');
+//             }
+
+//             return {
+//                 success: true,
+//                 message: 'Deposit rejected and deleted successfully.',
+//             };
+//         }
+
+//         // Step 4: If the status is 'accepted', proceed to credit the wallet
+//         if (status === 'accepted') {
+//             // Update the deposit status to 'accepted'
+//             const updateQuery = 'UPDATE deposits SET status = ? WHERE id = ?';
+//             const updateResult = await query(updateQuery, [status, depositId]);
+
+//             if (updateResult.affectedRows === 0) {
+//                 throw new Error('Failed to update deposit status to accepted.');
+//             }
+
+//             // Step 5: Call the creditWallet method to credit the user's wallet
+//             const creditResponse = await cryptoInvestmentService.creditWallet(walletId, depositId, amount);
+
+//             // Check if the wallet crediting process was successful
+//             if (creditResponse.success) {
+//                 return {
+//                     success: true,
+//                     message: 'Deposit status updated to accepted and wallet credited successfully.',
+//                     walletId: creditResponse.walletId,
+//                     creditedAmount: creditResponse.creditedAmount,
+//                     newBalance: creditResponse.newBalance,
+//                     depositId: creditResponse.depositId,
+//                     depositAmount: creditResponse.depositAmount
+//                 };
+//             } else {
+//                 throw new Error(`Wallet credit failed: ${creditResponse.message}`);
+//             }
+//         }
+
+//         // Handle invalid status update request
+//         return {
+//             success: false,
+//             message: 'Invalid status update requested. Only "accepted" or "rejected" statuses are allowed.',
+//         };
+
+//     } catch (error) {
+//         return {
+//             success: false,
+//             message: `Error updating deposit status: ${error.message}`,
+//         };
+//     }
+// };
+
+cryptoInvestmentService.updateDepositStatusCreditWalletAndApproval = async (depositId, status) => {
+    try {
+        // Step 1: Check if the deposit exists and retrieve its details
+        const depositQuery = 'SELECT walletId, amount, currencyId, status FROM deposits WHERE id = ?';
+        const depositResult = await query(depositQuery, [depositId]);
+
+        if (depositResult.length === 0) {
+            throw new Error('Deposit not found.');
+        }
+
+        const deposit = depositResult[0];
+        const { walletId, amount, currencyId, status: currentStatus } = deposit;
+
+        // Step 2: Check if the current status is already 'accepted'
+        if (currentStatus === 'accepted') {
+            return {
+                success: false,
+                message: 'Deposit is already accepted and wallet credited.',
+            };
+        }
+
+        // Step 3: If the status is 'rejected', delete the deposit
+        if (status === 'rejected') {
+            const deleteQuery = 'DELETE FROM deposits WHERE id = ?';
+            const deleteResult = await query(deleteQuery, [depositId]);
+
+            if (deleteResult.affectedRows === 0) {
+                throw new Error('Failed to delete the rejected deposit.');
+            }
+
+            return {
+                success: true,
+                message: 'Deposit rejected and deleted successfully.',
+            };
+        }
+
+        // Step 4: If the status is 'accepted', proceed to credit the wallet
+        if (status === 'accepted') {
+            // Update the deposit status to 'accepted'
+            const updateQuery = 'UPDATE deposits SET status = ? WHERE id = ?';
+            const updateResult = await query(updateQuery, [status, depositId]);
+
+            if (updateResult.affectedRows === 0) {
+                throw new Error('Failed to update deposit status to accepted.');
+            }
+
+            // Step 5: Call the creditWallet method to credit the user's wallet
+            const creditResponse = await cryptoInvestmentService.creditWallet(walletId, depositId, amount);
+
+            // Check if the wallet crediting process was successful
+            if (creditResponse.success) {
+                // Step 6: Insert a transaction record
+                const insertTransactionQuery = `
+                    INSERT INTO transactions (walletId, type, amount, currencyId, status, createdAt) 
+                    VALUES (?, 'deposit', ?, ?, 'completed', NOW())
+                `;
+                const transactionResult = await query(insertTransactionQuery, [
+                    walletId,
+                    amount,
+                    currencyId
+                ]);
+
+                if (transactionResult.affectedRows === 0) {
+                    throw new Error('Failed to record transaction.');
+                }
+
+                return {
+                    success: true,
+                    message: 'Deposit status updated to accepted, wallet credited, and transaction recorded successfully.',
+                    walletId: creditResponse.walletId,
+                    creditedAmount: creditResponse.creditedAmount,
+                    newBalance: creditResponse.newBalance,
+                    depositId: creditResponse.depositId,
+                    depositAmount: creditResponse.depositAmount
+                };
+            } else {
+                throw new Error(`Wallet credit failed: ${creditResponse.message}`);
+            }
+        }
+
+        // Handle invalid status update request
+        return {
+            success: false,
+            message: 'Invalid status update requested. Only "accepted" or "rejected" statuses are allowed.',
+        };
+
+    } catch (error) {
+        return {
+            success: false,
+            message: `Error updating deposit status: ${error.message}`,
+        };
+    }
+};
+
+
+
+
+cryptoInvestmentService.getLockedFunds = async () => {
+    try {
+        const queryStr = 
+            `SELECT 
+                wallets.id AS walletId,
+                wallets.walletAddress,
+                deposits.amount AS lockedAmount,
+                currencies.code AS currencyCode,
+                currencies.symbol AS currencySymbol
+            FROM 
+                deposits
+            INNER JOIN 
+                wallets ON deposits.walletId = wallets.id
+            INNER JOIN 
+                currencies ON deposits.currencyId = currencies.id
+            LEFT JOIN 
+                payouts ON payouts.walletId = wallets.id AND (payouts.status = 'pending' OR payouts.status = 'rejected')    
+            WHERE 
+                deposits.status = 'pending'`;
+
+        const result = await query(queryStr);
+
+        return {
+            message: 'Locked funds retrieved successfully',
+            data: result,
+            success: true,
+        };
+    } catch (error) {
+        return {
+            message: `Error retrieving locked funds: ${error.message}`,
+            success: false,
+        };
+    }
+};
+
+
+cryptoInvestmentService.getRecentDeposits = async (limit = 10) => {
+    try {
+        const queryStr = 
+            `SELECT 
+                deposits.id AS depositId,
+                deposits.amount,
+                deposits.createdAt,
+                wallets.walletAddress,
+                currencies.code AS currencyCode,
+                currencies.symbol AS currencySymbol
+            FROM 
+                deposits
+            INNER JOIN 
+                wallets ON deposits.walletId = wallets.id
+            INNER JOIN 
+                currencies ON deposits.currencyId = currencies.id
+            ORDER BY 
+                deposits.createdAt DESC
+            LIMIT ?`;
+
+        const result = await query(queryStr, [limit]);
+
+        return {
+            message: 'Recent deposits retrieved successfully',
+            data: result,
+            success: true,
+        };
+    } catch (error) {
+        return {
+            message: `Error retrieving recent deposits: ${error.message}`,
+            success: false,
+        };
+    }
+};
+
+cryptoInvestmentService.getRecentWithdrawals = async (limit = 10) => {
+    try {
+        const queryStr = 
+            `SELECT 
+                payouts.id AS payoutId,
+                payouts.amount,
+                payouts.createdAt,
+                wallets.walletAddress,
+                currencies.code AS currencyCode,
+                currencies.symbol AS currencySymbol
+            FROM 
+                payouts
+            INNER JOIN 
+                wallets ON payouts.walletId = wallets.id
+            INNER JOIN 
+                currencies ON payouts.currencyId = currencies.id
+            ORDER BY 
+                payouts.createdAt DESC
+            LIMIT ?`;
+
+        const result = await query(queryStr, [limit]);
+
+        return {
+            message: 'Recent withdrawals retrieved successfully',
+            data: result,
+            success: true,
+        };
+    } catch (error) {
+        return {
+            message: `Error retrieving recent withdrawals: ${error.message}`,
+            success: false,
+        };
+    }
+};
+
 
 
 // Retrieve all deposit requests
@@ -607,6 +2119,40 @@ cryptoInvestmentService.getAllDeposits = async () => {
         throw error;
     }
 };
+
+
+// Service method to get all unapproved deposits
+cryptoInvestmentService.getAllUnapprovedDeposits = async () => {
+    try {
+        const selectQuery = `
+            SELECT deposits.id, 
+                   deposits.planId, 
+                   deposits.userId, 
+                   deposits.walletId, 
+                   deposits.amount, 
+                   deposits.currencyId, 
+                   deposits.proofOfPayment, 
+                   deposits.status, 
+                   deposits.createdAt,
+                   CONCAT(users.firstName, ' ', users.lastName) AS depositorName, 
+                   users.phone, 
+                   users.email,
+                   currencies.name AS currencyName,
+                   subscription_plans.label AS subscriptionPlanLabel
+            FROM deposits
+            JOIN users ON deposits.userId = users.id
+            JOIN currencies ON deposits.currencyId = currencies.id
+            JOIN subscription_plans ON deposits.planId = subscription_plans.id
+            WHERE deposits.status = 'pending';
+        `;
+        
+        const unapprovedDeposits = await query(selectQuery);
+        return unapprovedDeposits;
+    } catch (error) {
+        throw new Error(`Failed to retrieve pending deposits: ${error.message}`);
+    }
+};
+
 
 // Request a withdrawal
 cryptoInvestmentService.requestWithdrawal = async (walletId, amount, currencyId) => {
@@ -688,9 +2234,6 @@ cryptoInvestmentService.getUserWalletAndSubscriptionDetails = async (userId) => 
     }
 };
 
-
-
-// Additional implementation for managing subscriptions and deposits
 
 // Create a new subscription for a user
 cryptoInvestmentService.createSubscription = async (walletId, planId, currencyId, reinvest = false) => {
@@ -887,16 +2430,6 @@ cryptoInvestmentService.deleteDeposit = async (depositId) => {
 };
 
 
-// cryptoInvestmentService.calculateEarnings = (rate, depositAmount, duration) => {
-//     return (parseFloat(rate) * depositAmount * duration).toFixed(2);
-// };
-
-
-// cryptoInvestmentService.getPlanDetails = async (planId) => {
-//     const plan = await query("SELECT * FROM subscription_plans WHERE id = ?", [planId]);
-//     return plan.length ? plan[0] : null;
-// };
-
 // Function to get plan details by plan ID
 async function getPlanDetails(planId) {
     try {
@@ -962,337 +2495,18 @@ cryptoInvestmentService.getOrCreateSubscription = async (walletId, planId, curre
 
 
 
-
-// cryptoInvestmentService.calculateEarnings = (rate, depositAmount, duration) => {
-//     let rateDecimal;
-
-//     // Check if rate is a string with a '%' sign
-//     if (typeof rate === 'string' && rate.includes('%')) {
-//         // Remove '%' and convert to decimal
-//         rateDecimal = parseFloat(rate) / 100;
-//     } else if (typeof rate === 'number') {
-//         // Assume rate is already in decimal form (e.g., 0.05 for 5%)
-//         rateDecimal = rate;
-//     } else {
-//         throw new Error("Invalid rate format. Rate must be a number or a percentage string.");
-//     }
-
-//     // Convert duration to a number, ensuring it's a valid number
-//     let durationNumber;
-//     if (typeof duration === 'string') {
-//         // Extract the numeric part of the duration string
-//         const durationMatch = duration.match(/\d+/); // Matches one or more digits
-//         if (durationMatch) {
-//             durationNumber = parseFloat(durationMatch[0]); // Convert to number
-//         } else {
-//             throw new Error("Invalid duration format. Duration string must contain a numeric value.");
-//         }
-//     } else if (typeof duration === 'number') {
-//         // Assume duration is already a number
-//         durationNumber = duration;
-//     } else {
-//         throw new Error("Invalid duration format. Duration must be a number or a string containing numeric value.");
-//     }
-
-//     // Calculate earnings
-//     return (rateDecimal * depositAmount * durationNumber).toFixed(2);
-// };
-
-cryptoInvestmentService.calculateEarnings = (rate, depositAmount, duration) => {
-    return (parseFloat(rate) * depositAmount * duration).toFixed(2);
-};
-
-
-
-// cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, currencyId, depositAmount, proofOfPayment) => {
-//     try {
-//         // Fetch the subscription plan details
-//         const plan = await getPlanDetails(planId);
-//         if (!plan) throw new Error("Invalid subscription plan selected");
-
-//         // Validate deposit amount
-//         if (depositAmount < plan.minInvest || depositAmount > plan.maxInvest) {
-//             throw new Error(`Deposit amount must be between ${plan.minInvest} and ${plan.maxInvest}`);
-//         }
-
-//         rateDecimal = parseFloat(plan.rate) / 100;
-//         duration = plan.duration
-//         console.log('====================================');
-//         console.log(rateDecimal, duration);
-//         console.log('====================================');
-//         // rateDecimal = parseFloat(rate) / 100;
-//         // Calculate earnings (not credited until the duration is due)
-//         // const earnings = await calculateEarnings(rateDecimal, depositAmount, duration);
-//         // const earnings = calculateEarnings(plan.rate, depositAmount, plan.duration);
-//         const earnings = (parseFloat(rateDecimal) * depositAmount * duration).toFixed(2);
-
-//         // Update or create subscription
-//          // Create new subscription
-//          const subscriptionId = await query(
-//             `INSERT INTO subscriptions (walletId, planId, startDate, endDate, earnings, currencyId, reinvest)
-//             VALUES (?, ?, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MONTH), ?, ?, ?)`,
-//             [walletId, planId, duration, earnings, currencyId, false]
-//         );
-//         // const subscriptionId = await getOrCreateSubscription(walletId, planId, currencyId, depositAmount, earnings, parseInt(plan.duration));
-
-//         // Request deposit (pending approval)
-//         const depositRequest = await cryptoInvestmentService.requestDeposit(walletId, depositAmount, currencyId, proofOfPayment);
-
-//         return {
-//             success: true,
-//             message: `Deposit request submitted successfully for subscription plan ${plan.label}. Admin approval is required.`,
-//             subscriptionId,
-//             earnings,
-//             depositRequest
-//         };
-//     } catch (error) {
-//         console.error(error);
-//         return {
-//             success: false,
-//             message: error.message,
-//         };
-//     }
-// };
-
-
-// cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, currencyId, depositAmount, proofOfPayment) => {
-//     try {
-//         // Fetch the subscription plan details
-//         const plan = await getPlanDetails(planId);
-//         if (!plan) throw new Error("Invalid subscription plan selected");
-
-//         // Validate deposit amount
-//         if (depositAmount < plan.minInvest || depositAmount > plan.maxInvest) {
-//             throw new Error(`Deposit amount must be between ${plan.minInvest} and ${plan.maxInvest}`);
-//         }
-
-//         const rateDecimal = parseFloat(plan.rate) / 100;
-//         const duration = parseInt(plan.duration);
-
-//         console.log('Rate:', rateDecimal, 'Duration:', duration);
-
-//         // Request deposit (initially pending approval)
-//         const depositRequest = await cryptoInvestmentService.requestDeposit(walletId, depositAmount, currencyId, proofOfPayment);
-
-//         if (!depositRequest.success) {
-//             throw new Error('Failed to request deposit');
-//         }
-
-//         // Wait for deposit to be accepted (this could be a separate async flow or a polling mechanism)
-//         const depositId = depositRequest.depositId;
-
-//         // Here, assume we have a function to check deposit status
-//         const isAccepted = await checkDepositStatus(depositId);
-
-//         if (!isAccepted) {
-//             return {
-//                 success: false,
-//                 message: 'Deposit request is still pending approval or was rejected.',
-//             };
-//         }
-
-//         // Calculate earnings
-//         const earnings = (rateDecimal * depositAmount * duration).toFixed(2);
-
-//         // Create new subscription with the accepted deposit
-//         const result = await query(
-//             `INSERT INTO subscriptions (walletId, planId, startDate, endDate, earnings, currencyId, reinvest, depositId)
-//              VALUES (?, ?, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MONTH), ?, ?, ?, ?)`,
-//             [walletId, planId, duration, earnings, currencyId, false, depositId]
-//         );
-
-//         const subscriptionId = result.insertId;
-
-//         return {
-//             success: true,
-//             message: `Deposit accepted and subscription created successfully for plan ${plan.label}.`,
-//             subscriptionId,
-//             earnings,
-//             depositId
-//         };
-//     } catch (error) {
-//         console.error(error);
-//         return {
-//             success: false,
-//             message: error.message,
-//         };
-//     }
-// };
-
-
-// cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, currencyId, depositAmount, proofOfPayment) => {
-//     try {
-//         const plan = await query('SELECT * FROM subscription_plans WHERE id = ?', [planId]);
-//         if (!plan || plan.length === 0) throw new Error("Invalid subscription plan selected");
-
-//         const selectedPlan = plan[0];
-
-//         // Validate deposit amount
-//         if (depositAmount < selectedPlan.minInvest || depositAmount > selectedPlan.maxInvest) {
-//             throw new Error(`Deposit amount must be between ${selectedPlan.minInvest} and ${selectedPlan.maxInvest}`);
-//         }
-
-//         // Calculate earnings
-//         const rateDecimal = parseFloat(selectedPlan.rate) / 100;
-//         const duration = parseInt(selectedPlan.duration);
-//         const earnings = (rateDecimal * depositAmount * duration).toFixed(2);
-
-//         // Insert deposit request
-//         const depositResult = await query(
-//             `INSERT INTO deposits (walletId, amount, currencyId, status, proofOfPayment, createdAt)
-//             VALUES (?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)`,
-//             [walletId, depositAmount, currencyId, proofOfPayment]
-//         );
-
-//         const depositId = depositResult.insertId;
-
-//         // Create subscription
-//         const subscriptionResult = await query(
-//             `INSERT INTO subscriptions (walletId, planId, startDate, endDate, earnings, currencyId, reinvest, depositId)
-//             VALUES (?, ?, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MONTH), ?, ?, FALSE, ?)`,
-//             [walletId, planId, duration, earnings, currencyId, depositId]
-//         );
-
-//         const subscriptionId = subscriptionResult.insertId;
-
-//         return {
-//             success: true,
-//             message: `Deposit request submitted and subscription created successfully for plan ${selectedPlan.label}. Admin approval is required.`,
-//             subscriptionId,
-//             earnings,
-//             depositId,
-//         };
-//     } catch (error) {
-//         console.error(error);
-//         return {
-//             success: false,
-//             message: error.message,
-//         };
-//     }
-// };
-
-
-
-// Function to handle deposit and subscription
-// cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, currencyId, depositAmount, proofOfPayment) => {
-//     try {
-//         // Fetch the subscription plan details using the helper function
-//         const selectedPlan = await getPlanDetails(planId);
-
-//         // Validate deposit amount
-//         if (depositAmount < selectedPlan.minInvest || depositAmount > selectedPlan.maxInvest) {
-//             throw new Error(`Deposit amount must be between ${selectedPlan.minInvest} and ${selectedPlan.maxInvest}`);
-//         }
-
-//         // Calculate earnings
-//         const rateDecimal = parseFloat(selectedPlan.rate) / 100;
-//         const duration = parseInt(selectedPlan.duration);
-//         const earnings = (rateDecimal * depositAmount * duration).toFixed(2);
-
-//         // Insert deposit request
-//         const depositResult = await query(
-//             `INSERT INTO deposits (walletId, amount, currencyId, status, proofOfPayment, createdAt)
-//              VALUES (?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)`,
-//             [walletId, depositAmount, currencyId, proofOfPayment]
-//         );
-
-//         const depositId = depositResult.insertId;
-
-//         // Create subscription
-//         const subscriptionResult = await query(
-//             `INSERT INTO subscriptions (walletId, planId, startDate, endDate, earnings, currencyId, reinvest, depositId)
-//              VALUES (?, ?, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MONTH), ?, ?, FALSE, ?)`,
-//             [walletId, planId, duration, earnings, currencyId, depositId]
-//         );
-
-//         const subscriptionId = subscriptionResult.insertId;
-
-//         return {
-//             success: true,
-//             message: `Deposit request submitted and subscription created successfully for plan ${selectedPlan.label}. Admin approval is required.`,
-//             subscriptionId,
-//             earnings,
-//             depositId,
-//             planLabel: selectedPlan.label, // Pass the plan label for use in the controller
-//         };
-//     } catch (error) {
-//         console.error(error);
-//         return {
-//             success: false,
-//             message: error.message,
-//         };
-//     }
-// };
-
-
-// cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, currencyId, depositAmount, proofOfPayment) => {
-//     try {
-//         // Fetch the subscription plan details using the helper function
-//         const selectedPlan = await getPlanDetails(planId);
-
-//         // Validate deposit amount
-//         if (depositAmount < selectedPlan.minInvest || depositAmount > selectedPlan.maxInvest) {
-//             throw new Error(`Deposit amount must be between ${selectedPlan.minInvest} and ${selectedPlan.maxInvest}`);
-//         }
-
-//         // Calculate earnings
-//         const rateDecimal = parseFloat(selectedPlan.rate) / 100;
-//         const duration = parseInt(selectedPlan.duration);
-//         const earnings = (rateDecimal * depositAmount * duration).toFixed(2);
-
-//         // Calculate total amount to be collected
-//         const totalAmount = (parseFloat(depositAmount) + parseFloat(earnings)).toFixed(2);
-
-//         // Insert deposit request
-//         const depositResult = await query(
-//             `INSERT INTO deposits (walletId, amount, currencyId, status, proofOfPayment, createdAt)
-//              VALUES (?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)`,
-//             [walletId, depositAmount, currencyId, proofOfPayment]
-//         );
-
-//         const depositId = depositResult.insertId;
-
-//         // Create subscription with totalTurnOver
-//         const subscriptionResult = await query(
-//             `INSERT INTO subscriptions (walletId, planId, startDate, endDate, earnings, currencyId, reinvest, depositId, totalTurnOver)
-//              VALUES (?, ?, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MONTH), ?, ?, FALSE, ?, ?)`,
-//             [walletId, planId, duration, earnings, currencyId, depositId, totalAmount]
-//         );
-
-//         const subscriptionId = subscriptionResult.insertId;
-
-//         return {
-//             success: true,
-//             message: `Deposit request submitted and subscription created successfully for plan ${selectedPlan.label}. Admin approval is required.`,
-//             subscriptionId,
-//             earnings,
-//             depositId,
-//             totalAmount, // Return the total amount to be collected
-//             planLabel: selectedPlan.label, // Include the plan label
-//         };
-//     } catch (error) {
-//         console.error(error);
-//         return {
-//             success: false,
-//             message: error.message,
-//         };
-//     }
-// };
-
-
 cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, currencyId, depositAmount, proofOfPayment, userId) => {
     try {
         // Fetch the subscription plan details using the helper function
         const selectedPlan = await getPlanDetails(planId);
 
-                // Fetch the user details
-                const user = await getUserDetails(userId);
+        // Fetch the user details
+        const user = await getUserDetails(userId);
 
-                // Validate if the user exists
-                if (!user) {
-                    throw new Error('User not found');
-                }
-        
+        // Validate if the user exists
+        if (!user) {
+            throw new Error('User not found');
+        }
 
         // Validate deposit amount
         if (depositAmount < selectedPlan.minInvest || depositAmount > selectedPlan.maxInvest) {
@@ -1320,9 +2534,9 @@ cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, 
 
         // Insert deposit request
         const depositResult = await query(
-            `INSERT INTO deposits (walletId, amount, currencyId, status, proofOfPayment, createdAt)
-             VALUES (?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)`,
-            [walletId, depositAmount, currencyId, proofOfPayment]
+            `INSERT INTO deposits (planId, userId, walletId, amount, currencyId, proofOfPayment, status, createdAt)
+             VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
+            [planId, userId, walletId, depositAmount, currencyId, proofOfPayment]
         );
 
         const depositId = depositResult.insertId;
@@ -1356,6 +2570,8 @@ cryptoInvestmentService.handleDepositAndSubscription = async (walletId, planId, 
         };
     }
 };
+
+
 
 
 

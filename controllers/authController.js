@@ -1,20 +1,68 @@
 const authenticationService = require('../services/authService');
 const sendEmailVerification = require('../services/sendEmailVerification');
+const cryptoInvestmentService = require('../services/cryptoInvestmentService');
+
+
+// Create User
+// async function createUser(req, res) {
+//     try {
+//         const { firstName, lastName, email, phone, password, role } = req.body;
+//         const user = await authenticationService.createUser({ firstName, lastName, email, phone, password, role });
+        
+//         // Optionally send verification email
+//         // await sendEmailVerification(email);
+//         // Create a wallet for the new customer
+//         const wallet = await cryptoInvestmentService.createWallet({
+//             userId: user.id,
+//             currencyId: 1
+//         });
+
+//         res.status(201).json({
+//             success: true,
+//             message: 'User Accountg and Wallet created successfully',
+//             user,
+//             wallet
+//         });
+
+//     } catch (error) {
+//         console.error('Error creating user:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Failed to create user',
+//             error: error.message
+//         });
+//     }
+// }
+
 
 // Create User
 async function createUser(req, res) {
     try {
         const { firstName, lastName, email, phone, password, role } = req.body;
-        const user = await authenticationService.createUser({ firstName, lastName, email, phone, password, role });
-        
-        // Optionally send verification email
-        await sendEmailVerification(email);
 
+        // Create the user
+        const user = await authenticationService.createUser({ firstName, lastName, email, phone, password, role });
+
+        // Create a wallet for the new customer
+        const walletResponse = await cryptoInvestmentService.createWallet(user.id, 1);
+
+        if (!walletResponse.success) {
+            return res.status(201).json({
+                success: true,
+                message: 'User account created, but wallet creation failed.',
+                user,
+                walletError: walletResponse.message // Include wallet error message
+            });
+        }
+
+        // If wallet creation is successful
         res.status(201).json({
             success: true,
-            message: 'User created successfully',
-            user
+            message: 'User account and wallet created successfully.',
+            user,
+            wallet: walletResponse
         });
+
     } catch (error) {
         console.error('Error creating user:', error);
         res.status(500).json({
@@ -24,6 +72,7 @@ async function createUser(req, res) {
         });
     }
 }
+
 
 // Get User by ID
 async function getUserById(req, res) {

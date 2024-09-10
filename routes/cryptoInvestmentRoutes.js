@@ -65,12 +65,39 @@ router.post('/wallets', cryptoInvestmentController.createWallet);
 router.post('/wallets/credit', cryptoInvestmentController.creditWallet);
 router.get('/wallets/:walletId/transactions', cryptoInvestmentController.getAllTransactionsByWalletId);
 router.get('/wallets/:userId/details', cryptoInvestmentController.getUserWalletAndSubscriptionDetails);
+router.get('/userWallets/:currencyId', cryptoInvestmentController.getWalletsByCurrencyId);
+router.get('/user/:userId/wallets', cryptoInvestmentController.getUserWallets);
+// router.get('/user/:userId/wallets', cryptoInvestmentController.getTransactionHistory);
+// router.get('/wallet/transactions/history/:walletId', cryptoInvestmentController.getTransactionHistory);
+
+router.get('/wallet/user-wallet-history/:userId', cryptoInvestmentController.getUserDetailsWithWallet);
+router.get('/wallet/user-wallet-subscription-details/:userId', cryptoInvestmentController.getUserWalletAndSubscriptionPlanDetails);
+// http://localhost:3005/api/crypto/wallet/user-wallet-subscription-details/1
+
 
 // Routes for deposit operations
 router.post('/deposits',  uploadMiddleware, cryptoInvestmentController.requestDeposit);
 router.put('/deposits/:depositId/status', cryptoInvestmentController.updateDepositStatus);
 router.post('/deposits/subscription', uploadMiddleware, cryptoInvestmentController.handleDepositAndSubscription);
 router.get('/deposits', cryptoInvestmentController.getAllDeposits);
+router.get('/getLockedFunds', cryptoInvestmentController.getLockedFunds);
+router.get('/getRecentDeposits', cryptoInvestmentController.getRecentDeposits);
+router.get('/getRecentWithdrawals', cryptoInvestmentController.getRecentWithdrawals);
+
+
+
+
+//Admin Aproval Operations
+
+// Route for updating deposit status
+router.get('/all-pending-deposits', cryptoInvestmentController.getAllUnapprovedDeposits);
+router.put('/admin-deposit-approvalAndCreditWallet', cryptoInvestmentController.updateDepositStatusCreditWalletAndApproval);
+
+
+
+// Route to approve or reject deposit and update wallet
+router.put('/approve-deposit-status/:depositId', cryptoInvestmentController.updateDepositStatusCreditWalletAndApproval);
+
 
 // Routes for withdrawal operations
 router.post('/withdrawals', cryptoInvestmentController.requestWithdrawal);

@@ -142,3 +142,18 @@ The total returns will vary based on whether the duration is in days or months. 
 For Days: Total Amount = 15,295.68 (assuming annual rate divided into daily rate).
 For Months: Total Amount = 24,000 (assuming simple monthly interest without compounding).
 If you need a specific calculation based on how your rate is compounded or if you have more details, let me know!
+
+
+
+
+    CREATE TABLE IF NOT EXISTS deposits (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        walletId INT NOT NULL,
+        amount DECIMAL(15, 2) NOT NULL,
+        currencyId INT NOT NULL,
+        status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+        proofOfPayment VARCHAR(255) DEFAULT NULL,  -- Path to proof of payment file
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (walletId) REFERENCES wallets(id),
+        FOREIGN KEY (currencyId) REFERENCES currencies(id)
+    );

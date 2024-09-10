@@ -49,17 +49,59 @@ const getAllCurrencies = async (req, res) => {
     }
 };
 
-// Controller for creating a new wallet
+
 const createWallet = async (req, res) => {
+
     const { userId, currencyId } = req.body;
 
+    if (!userId || !currencyId) {
+        return res.status(400).json({
+            success: false,
+            message: 'userId and currencyId are required fields',
+        });
+    }
+
     try {
-        const response = await cryptoInvestmentService.createWallet(userId, currencyId);
-        res.status(201).json({ message: 'Wallet created successfully', data: response });
+        // Attempt to create a wallet
+        const result = await cryptoInvestmentService.createWallet(userId, currencyId);
+
+        // Check if the creation was successful
+        if (result.success === false) {
+            // Send a 500 error response with a detailed error message
+            res.status(500).json({
+                success: false,
+                message: result.message || 'Failed to create wallet',
+            });
+        } else {
+            // Send a 201 success response with wallet details and additional info
+            res.status(201).json({
+                success: true,
+                message: result.message || 'Wallet created successfully',
+                walletId: result.walletId,
+                walletAddress: result.walletAddress,
+                additionalInfo: result.additionalInfo, // Include any additional info (e.g., generation message)
+            });
+        }
     } catch (error) {
-        res.status(500).json({ message: 'Failed to create wallet', error: error.message });
+        // Send a 500 error response with a detailed error message for unexpected errors
+        res.status(500).json({
+            success: false,
+            message: `Internal server error: ${error.message}`,
+        });
     }
 };
+
+// Controller for creating a new wallet
+// const createWallet = async (req, res) => {
+//     const { userId, currencyId } = req.body;
+
+//     try {
+//         const response = await cryptoInvestmentService.createWallet(userId, currencyId);
+//         res.status(201).json({ message: 'Wallet created successfully', data: response });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Failed to create wallet', error: error.message });
+//     }
+// };
 
 // Controller for crediting a wallet
 // const creditWallet = async (req, res) => {
@@ -177,6 +219,367 @@ const updateDepositStatus = async (req, res) => {
         res.status(500).json({ message: 'Failed to update deposit status', error: error.message });
     }
 };
+
+
+// const updateDepositStatusCreditWalletAndApproval = async(req, res)=>{
+//     const { depositId, newStatus } = req.body;
+
+//     try {
+//         // Validate input parameters
+//         if (!depositId || !newStatus) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Missing required fields: depositId and newStatus.',
+//             });
+//         }
+
+//         // Check if the newStatus is valid
+//         if (newStatus !== 'accepted' && newStatus !== 'rejected') {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Invalid status. Only "accepted" or "rejected" are allowed.',
+//             });
+//         }
+
+//         // Call the service method to update the deposit status
+//         const result = await cryptoInvestmentService.updateDepositStatusCreditWalletAndApproval(depositId, newStatus);
+
+//         // Return the response from the service method
+//         if (result.success) {
+//             return res.status(200).json({
+//                 success: true,
+//                 message: result.message,
+//             });
+//         } else {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: result.message,
+//             });
+//         }
+
+//     } catch (error) {
+//         // Log the error (if you have a logging mechanism) and return a generic error response
+//         console.error('Error in updateDepositStatus:', error);
+//         return res.status(500).json({
+//             success: false,
+//             message: 'An unexpected error occurred while updating deposit status.',
+//         });
+//     }
+
+// }
+
+const updateDepositStatusCreditWalletAndApproval = async (req, res) => {
+    const { depositId } = req.params;  // Extract depositId from the route params
+    const { status } = req.body;  // Extract status from the request body
+
+    try {
+        // Validate input parameters
+        if (!depositId || !status) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: depositId and status.',
+            });
+        }
+
+        // Check if the status is valid
+        if (status !== 'accepted' && status !== 'rejected') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status. Only "accepted" or "rejected" are allowed.',
+            });
+        }
+
+        // Call the service method to update the deposit status
+        const result = await cryptoInvestmentService.updateDepositStatusCreditWalletAndApproval(depositId, status);
+
+        // Return the response from the service method
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                message: result.message,
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message,
+            });
+        }
+
+    } catch (error) {
+        // Log the error and return a generic error response
+        console.error('Error in updateDepositStatus:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred while updating deposit status.',
+        });
+    }
+};
+
+
+
+const getLockedFunds = async (req, res) => {
+    try {
+        const result = await cryptoInvestmentService.getLockedFunds();
+
+        if (result.success) {
+            return res.status(200).json({
+                message: 'Locked funds retrieved successfully.',
+                data: result.data,
+            });
+        } else {
+            return res.status(404).json({
+                message: 'No locked funds found.',
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            message: `Failed to retrieve locked funds. Error: ${error.message}`,
+        });
+    }
+};
+
+const getRecentDeposits = async (req, res) => {
+    try {
+        const result = await cryptoInvestmentService.getRecentDeposits();
+
+        if (result.success) {
+            return res.status(200).json({
+                message: 'Recent deposits retrieved successfully.',
+                data: result.data,
+            });
+        } else {
+            return res.status(404).json({
+                message: 'No recent deposits found.',
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            message: `Failed to retrieve recent deposits. Error: ${error.message}`,
+        });
+    }
+};
+
+const getRecentWithdrawals = async (req, res) => {
+    try {
+        const result = await cryptoInvestmentService.getRecentWithdrawals();
+
+        if (result.success) {
+            return res.status(200).json({
+                message: 'Recent withdrawals retrieved successfully.',
+                data: result.data,
+            });
+        } else {
+            return res.status(404).json({
+                message: 'No recent withdrawals found.',
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            message: `Failed to retrieve recent withdrawals. Error: ${error.message}`,
+        });
+    }
+};       
+
+
+const getWalletsByCurrencyId = async (req, res) => {
+    const { currencyId } = req.params;
+
+    try {
+        // Call the service function to get wallet details by currency ID
+        const result = await cryptoInvestmentService.userWallet(currencyId);
+
+        // Check if the service returned a message indicating no wallets were found
+        if (result.data.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No wallets found for the provided currency ID',
+            });
+        }
+
+        // Return a success response with the wallet details
+        return res.status(200).json({
+            success: true,
+            message: 'Wallet details retrieved successfully',
+            data: result.data,
+        });
+    } catch (error) {
+        // Handle errors and return a server error response
+        return res.status(500).json({
+            success: false,
+            message: `An error occurred while retrieving wallet details: ${error.message}`,
+        });
+    }
+};
+
+
+const getUserWallets = async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const result = await cryptoInvestmentService.getUserWallets(userId);
+
+        if (!result.success) {
+            return res.status(404).json({ message: result.message });
+        }
+
+        res.status(200).json({
+            message: result.message,
+            groupedWallets: result.data,
+        });
+    } catch (error) {
+        res.status(500).json({ message: `Internal server error: ${error.message}` });
+    }
+};
+
+const getTransactionHistory = async (req, res) => {
+    const { walletId } = req.params;
+
+    try {
+        const result = await cryptoInvestmentService.getTransactionHistory(walletId);
+
+        if (!result.success) {
+            return res.status(404).json({ message: result.message });
+        }
+
+        res.status(200).json({
+            message: result.message,
+            transactions: result.data,
+        });
+    } catch (error) {
+        res.status(500).json({ message: `Internal server error: ${error.message}` });
+    }
+};
+
+
+// Controller to get user details with wallet and currency info
+// Controller to handle fetching user details along with wallet and currency information
+// Controller to handle fetching user details along with wallet and currency information
+async function getUserDetailsWithWallet(req, res) {
+    const { userId } = req.params;
+
+    try {
+        const result = await cryptoInvestmentService.getUserWalletDetails(userId);
+
+        if (!result.success) {
+            return res.status(404).json({ message: result.message });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+            data: {
+                user: result.user,
+                wallet: result.wallet
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user wallet details:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
+}
+
+
+// const getUserWalletAndSubscriptionPlanDetails = async (req, res) => {
+//     const { userId } = req.params;
+//     const { currencyId, currencyCode, currencyName } = req.query;  // Capture filters from query params
+
+//     const currencyFilter = {
+//         currencyId: currencyId || null,
+//         currencyCode: currencyCode || null,
+//         currencyName: currencyName || null
+//     };
+
+//     try {
+//         const result = await cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails(userId, currencyFilter);
+
+//         if (!result.success) {
+//             return res.status(404).json({ message: result.message });
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             message: result.message,
+//             data: result.data
+//         });
+//     } catch (error) {
+//         console.error('Error fetching user wallet details:', error);
+//         return res.status(500).json({ message: 'Internal Server Error' });
+//     }
+// };
+
+// const getUserWalletAndSubscriptionPlanDetails = async (req, res) => {
+//     const { userId } = req.params;
+
+//     try {
+//         // Validate userId
+//         if (!userId || isNaN(userId)) {
+//             return res.status(400).json({ success: false, message: 'Invalid user ID format' });
+//         }
+
+//         // Fetch details from the service
+//         const result = await cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails(userId);
+
+//         if (!result.success) {
+//             if (result.message === 'No details found for the given user ID') {
+//                 return res.status(404).json({ success: false, message: result.message });
+//             }
+//             return res.status(500).json({ success: false, message: result.message });
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             message: result.message,
+//             data: {
+//                 user: result.data.user,
+//                 wallets: result.data.wallets,
+//                 subscriptions: result.data.subscriptions
+//             }
+//         });
+//     } catch (error) {
+//         console.error('Error fetching user details:', error);
+//         return res.status(500).json({ success: false, message: 'Internal Server Error: ' + error.message });
+//     }
+// };
+
+
+const getUserWalletAndSubscriptionPlanDetails = async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        // Validate userId
+        if (!userId || isNaN(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID format' });
+        }
+
+        // Fetch details from the service
+        const result = await cryptoInvestmentService.getUserWalletAndSubscriptionPlanDetails(userId);
+
+        if (!result.success) {
+            if (result.message === 'No details found for the given user ID') {
+                return res.status(404).json({ success: false, message: result.message });
+            }
+            return res.status(500).json({ success: false, message: result.message });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+            data: {
+                user: result.data.user,
+                wallets: result.data.wallets,
+                subscriptions: result.data.subscriptions
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user details:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error: ' + error.message });
+    }
+};
+
+
+
+
+
 
 // Controller for handling deposit and subscription
 // const handleDepositAndSubscription = async (req, res) => {
@@ -508,6 +911,23 @@ const getAllDeposits = async (req, res) => {
         res.status(200).json({ message: 'Deposits retrieved successfully', data: deposits });
     } catch (error) {
         res.status(500).json({ message: 'Failed to retrieve deposits', error: error.message });
+    }
+};
+
+
+const getAllUnapprovedDeposits = async (req, res) => {
+    try {
+        const unapprovedDeposits = await cryptoInvestmentService.getAllUnapprovedDeposits();
+        if (!unapprovedDeposits || unapprovedDeposits.length === 0) {
+            return res.status(404).json({ message: "No unapproved deposits found." });
+        }
+        res.status(200).json(unapprovedDeposits);
+    } catch (error) {
+        console.error('Error retrieving unapproved deposits:', error);
+        res.status(500).json({
+            message: "Failed to retrieve pending deposits",
+            error: error.message
+        });
     }
 };
 
@@ -874,6 +1294,7 @@ module.exports = {
     getWithdrawalsByWalletId,
     getPayoutsByWalletId,
     getAllPayouts,
+    getAllUnapprovedDeposits,
     requestPayout,
     updatePayoutStatus,
     updateDepositProof,
@@ -881,7 +1302,16 @@ module.exports = {
     deleteSubscription,
     // getSubscriptionByCriteria,
     getSubscriptionsByCriteria,
-    getSubscriptionDetailsByUserId
+    getSubscriptionDetailsByUserId,
+    getWalletsByCurrencyId,
+    getUserWallets,
+    getTransactionHistory,
+    getUserDetailsWithWallet,
+    updateDepositStatusCreditWalletAndApproval,
+    getLockedFunds,
+    getRecentDeposits,
+    getRecentWithdrawals,
+    getUserWalletAndSubscriptionPlanDetails,
 };
 
 

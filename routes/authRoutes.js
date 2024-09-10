@@ -36,7 +36,8 @@ router.get('/users', cacheMiddleware, authController.getAllUsers);
 router.put('/update/:id', userToken, authController.updateUser);
 
 // Route to delete a user
-router.delete('/delete/:id', userToken, authController.deleteUser);
+router.delete('/delete/:id', authController.deleteUser);
+// router.delete('/delete/:id', userToken, authController.deleteUser);
 
 // Route to authenticate a user
 router.post('/login', authController.authenticateUser);
