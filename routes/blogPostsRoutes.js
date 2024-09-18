@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const testimonialController = require('../controllers/testimonialController');
+const blogPostsController = require('../controllers/blogPostsController');
 const multer = require('multer');
+const fs = require('fs');
 
 // Multer storage configuration
 const storage = multer.diskStorage({
@@ -14,7 +15,7 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter to accept only specific file formats
+// File filter to accept only DOC, PDF, TXT, and specified image file formats
 const fileFilter = (req, file, cb) => {
     const allowedTypes = [
         'application/msword', // DOC
@@ -35,7 +36,7 @@ const fileFilter = (req, file, cb) => {
         'image/svg+xml', // SVG
         'application/postscript', // AI
         'application/eps', // EPS
-        'application/octet-stream' // Generic
+        'application/octet-stream' // PDF
     ];
 
     if (allowedTypes.includes(file.mimetype)) {
@@ -49,37 +50,42 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 // Middleware function to handle file uploads
-const uploadMiddleware = upload.single('imagePath');
+const uploadMiddleware = upload.single('imageUrl');
 
-// Middleware function to handle upload errors
+
 const handleUploadError = (err, req, res, next) => {
     if (err) {
         return res.status(400).json({ success: false, message: err.message });
     }
     next();
-};
+}
+
+
 
 // Apply to create and update routes
-router.post('/create', uploadMiddleware,  testimonialController.createTestimonial);
-router.put('/update/:id', uploadMiddleware,  testimonialController.updateTestimonial);
+router.post('/create', uploadMiddleware, handleUploadError, blogPostsController.createBlogPost);
+router.put('/update/:id', uploadMiddleware, handleUploadError, blogPostsController.updateBlogPost);
 
-// Delete a testimonial post
-router.delete('/delete/:id', testimonialController.deleteTestimonial);
 
-// Get all testimonial posts
-router.get('/viewAll', testimonialController.getAllTestimonials);
+// Delete a blog post
+router.delete('/delete/:id', blogPostsController.deleteBlogPost);
 
-// Get all published testimonial posts
-router.get('/published', testimonialController.getAllPublishedTestimonials);
+// Get all blog posts
+router.get('/viewAll/', blogPostsController.getAllBlogPosts);
 
-// Get a single testimonial post by ID
-router.get('/view/:id', testimonialController.getTestimonialById);
+// Get all blog posts
+router.get('/published', blogPostsController.getAllPublishBlogPosts);
 
-// Update testimonial post status
-router.patch('/changeStatus/:id', testimonialController.changeTestimonialStatus);
+// Get a single blog post by ID
+router.get('/view/:id', blogPostsController.getBlogPostById);
 
-// Get paginated testimonial posts
-router.get('/allTestimonials/paginated', testimonialController.getPaginatedTestimonials);
+// Update blog post status
+router.patch('/changeStatus/:id', blogPostsController.updateBlogPostStatus);
+
+// Increment blog post views
+router.patch('/postViews/:id', blogPostsController.incrementBlogPostViews);
+
+// Get paginated blog posts
+router.get('/allBlogs/paginated', blogPostsController.getPaginatedBlogPosts);
 
 module.exports = router;
-

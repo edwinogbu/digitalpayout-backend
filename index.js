@@ -11,12 +11,15 @@ const authRoutes = require('./routes/authRoutes');
 const cryptoNewsRoutes = require('./routes/cryptoNewsRoutes');
 const cryptoInvestmentRoutes = require('./routes/cryptoInvestmentRoutes')
 const subscriptionPlanRoutes = require('./routes/subscriptionPlanRoutes')
+const testimonialRoutes = require('./routes/testimonialRoutes')
+const postsDepositsRoutes = require('./routes/postDepositsRoutes')
+const blogPostsRoutes = require('./routes/blogPostsRoutes')
 const session = require('express-session');
 
 // const conversationRoutes = require('./routes/conversationRoutes');
 
 const mysql = require('mysql');
-const swaggerUi = require('swagger-ui-express');
+const swaggerUi = require('swagger-ui-express');   
 const swaggerDocument = require('./swagger-output.json');
 
 dotenv.config();
@@ -79,6 +82,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cryptonews', cryptoNewsRoutes);
 app.use('/api/crypto', cryptoInvestmentRoutes);
 app.use('/api/subscription', subscriptionPlanRoutes);
+app.use('/api/testimonial', testimonialRoutes);
+app.use('/api/postDeposits', postsDepositsRoutes)
+app.use('/api/blogs', blogPostsRoutes)
 
 
 

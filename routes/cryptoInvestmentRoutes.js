@@ -55,9 +55,9 @@ const uploadMiddleware = upload.single('proofOfPayment');
 
 
 // Routes for currency operations
-router.post('/currencies', cryptoInvestmentController.createCurrency);
-router.put('/currencies', cryptoInvestmentController.updateCurrency);
-router.delete('/currencies/:id', cryptoInvestmentController.deleteCurrency);
+router.post('/create', cryptoInvestmentController.createCurrency);
+router.put('/update/:id', cryptoInvestmentController.updateCurrency);
+router.delete('/delete/:id', cryptoInvestmentController.deleteCurrency);
 router.get('/currencies', cryptoInvestmentController.getAllCurrencies);
 
 // Routes for wallet operations
@@ -73,7 +73,8 @@ router.get('/user/:userId/wallets', cryptoInvestmentController.getUserWallets);
 router.get('/wallet/user-wallet-history/:userId', cryptoInvestmentController.getUserDetailsWithWallet);
 router.get('/wallet/user-wallet-subscription-details/:userId', cryptoInvestmentController.getUserWalletAndSubscriptionPlanDetails);
 // http://localhost:3005/api/crypto/wallet/user-wallet-subscription-details/1
-
+router.get('/user-transactions/:userId', cryptoInvestmentController.getUserLatestTransactions);
+// http://localhost:3005/api/crypto/user-transactions/1
 
 // Routes for deposit operations
 router.post('/deposits',  uploadMiddleware, cryptoInvestmentController.requestDeposit);
@@ -124,10 +125,23 @@ router.get('/subscriptions/user/:userId', cryptoInvestmentController.getSubscrip
 
 
 // Routes for payout operations
-router.post('/payouts', cryptoInvestmentController.requestPayout);
-router.put('/payouts/:payoutId/status', cryptoInvestmentController.updatePayoutStatus);
-router.get('/wallets/:walletId/payouts', cryptoInvestmentController.getPayoutsByWalletId);
-router.get('/payouts', cryptoInvestmentController.getAllPayouts);
+// router.post('/payouts', cryptoInvestmentController.requestPayout);
+// router.put('/payouts/:payoutId/status', cryptoInvestmentController.updatePayoutStatus);
+// router.get('/wallets/:walletId/payouts', cryptoInvestmentController.getPayoutsByWalletId);
+// router.get('/payouts', cryptoInvestmentController.getAllPayouts);
+
+
+// Route to request a payout
+router.post('/payout/request', cryptoInvestmentController.requestPayout);
+
+// Route for admin to handle payout requests
+router.put('/admin/payout/:payoutId', cryptoInvestmentController.handlePayoutRequest);
+
+// Route to get all requested payouts
+router.get('/payouts/allRequested', cryptoInvestmentController.getRequestedPayouts);
+
+// Route to upload proof of payment for a payout
+router.put('/payout-proof-payment/:payoutId', cryptoInvestmentController.uploadPaymentProof);
 
 module.exports = router;
 

@@ -576,7 +576,30 @@ const getUserWalletAndSubscriptionPlanDetails = async (req, res) => {
     }
 };
 
-
+const getUserLatestTransactions = async(req, res)=>{
+    const { userId } = req.params
+    try {
+        if (!userId || isNaN(userId)) {
+            return res.status(400).json({ success:false, message:'Invalid user ID format'});
+        }
+        //Fetch transactions details
+        const result = await cryptoInvestmentService.getUserLatestTransactions(userId);
+        if (!result.success) {
+            if (result.message === 'No details found the given user ID') {
+                return res.status(400).json({success:false, message:result.message});
+            }
+            return res.status(500).json({success:false, message:result,message});
+        }
+        return res.status(200).json({
+            success:true,
+            message:result.message,
+            transactions:result.data
+        });
+    } catch (error) {
+        console.error('Error fetching transactions details:', error);
+        return res.status(500).json({success:false, message:'Internal server Error' + error.message})
+    }
+}
 
 
 
@@ -1142,16 +1165,16 @@ const getAllPayouts = async (req, res) => {
 };
 
 // Controller for requesting a payout
-const requestPayout = async (req, res) => {
-    const { walletId, amount, currencyId } = req.body;
+// const requestPayout = async (req, res) => {
+//     const { walletId, amount, currencyId } = req.body;
 
-    try {
-        const response = await cryptoInvestmentService.requestPayout(walletId, amount, currencyId);
-        res.status(201).json({ message: 'Payout requested successfully', data: response });
-    } catch (error) {
-        res.status(500).json({ message: 'Failed to request payout', error: error.message });
-    }
-};
+//     try {
+//         const response = await cryptoInvestmentService.requestPayout(walletId, amount, currencyId);
+//         res.status(201).json({ message: 'Payout requested successfully', data: response });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Failed to request payout', error: error.message });
+//     }
+// };
 
 // Controller for updating payout status
 const updatePayoutStatus = async (req, res) => {
@@ -1268,7 +1291,105 @@ const getSubscriptionDetailsByUserId = async (req, res)=>{
     }
 }
 
+
+// Request a payout
+async function requestPayout(req, res) {
+    const { userId, walletId, amount, currencyId } = req.body;
+    try {
+        const result = await cryptoInvestmentService.requestPayout(userId, walletId, amount, currencyId);
+        if (result.success) {
+            return res.status(201).json({
+                success: true,
+                message: result.message,
+                payoutId: result.payoutId,
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message,
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: `Error processing payout request: ${error.message}`,
+        });
+    }
+}
+
+// Admin handles a payout request
+async function handlePayoutRequest(req, res) {
+    const { payoutId } = req.params;
+    const { action } = req.body;
+    try {
+        const result = await cryptoInvestmentService.handlePayoutRequest(payoutId, action);
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                message: result.message,
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message,
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: `Error handling payout request: ${error.message}`,
+        });
+    }
+}
+
+// Get all requested payouts
+async function getRequestedPayouts(req, res) {
+    try {
+        const result = await cryptoInvestmentService.getRequestedPayouts();
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+            data: result.data,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: `Error retrieving requested payouts: ${error.message}`,
+        });
+    }
+}
+
+// Upload proof of payment
+async function uploadPaymentProof(req, res) {
+    const { payoutId } = req.params;
+    const { proofPath } = req.body;
+    try {
+        const result = await cryptoInvestmentService.uploadPaymentProof(payoutId, proofPath);
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                message: result.message,
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message,
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: `Error uploading payment proof: ${error.message}`,
+        });
+    }
+}
+
 module.exports = {
+    requestPayout,
+    handlePayoutRequest,
+    getRequestedPayouts,
+    uploadPaymentProof,
+
     createCurrency,
     updateCurrency,
     deleteCurrency,
@@ -1295,7 +1416,7 @@ module.exports = {
     getPayoutsByWalletId,
     getAllPayouts,
     getAllUnapprovedDeposits,
-    requestPayout,
+    
     updatePayoutStatus,
     updateDepositProof,
     listAllSubscriptions,
@@ -1312,6 +1433,7 @@ module.exports = {
     getRecentDeposits,
     getRecentWithdrawals,
     getUserWalletAndSubscriptionPlanDetails,
+    getUserLatestTransactions
 };
 
 
