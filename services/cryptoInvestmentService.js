@@ -1106,16 +1106,101 @@ cryptoInvestmentService.getRecentWithdrawals = async (limit = 10) => {
 
 
 // Retrieve all deposit requests
+// cryptoInvestmentService.getAllDeposits = async () => {
+//     try {
+//         const selectQuery = 'SELECT * FROM deposits';
+//         const deposits = await query(selectQuery);
+
+//         return deposits;
+//     } catch (error) {
+//         throw error;
+//     }
+// };
+
+
+// cryptoInvestmentService.getAllDeposits = async () => {
+//     try {
+//         const selectQuery = `
+//             SELECT deposits.id, 
+//                    deposits.planId, 
+//                    deposits.userId, 
+//                    deposits.walletId, 
+//                    deposits.amount, 
+//                    deposits.currencyId, 
+//                    deposits.proofOfPayment, 
+//                    deposits.status, 
+//                    deposits.createdAt,
+//                    CONCAT(users.firstName, ' ', users.lastName) AS depositorName, 
+//                    users.phone, 
+//                    users.email,
+//                    currencies.name AS currencyName,
+//                    subscription_plans.label AS subscriptionPlanLabel
+//             FROM deposits
+//             JOIN users ON deposits.userId = users.id
+//             JOIN currencies ON deposits.currencyId = currencies.id
+//             JOIN subscription_plans ON deposits.planId = subscription_plans.id
+//             WHERE deposits.status IN ('pending', 'accepted');
+//         `;
+        
+//         const unapprovedDeposits = await query(selectQuery);
+//         return unapprovedDeposits;
+//     } catch (error) {
+//         throw new Error(`Failed to retrieve pending or accepted deposits: ${error.message}`);
+//     }
+// };
+
 cryptoInvestmentService.getAllDeposits = async () => {
     try {
-        const selectQuery = 'SELECT * FROM deposits';
-        const deposits = await query(selectQuery);
-
-        return deposits;
+      const selectQuery = `
+        SELECT 
+          deposits.id AS depositId,
+          deposits.planId, 
+          deposits.userId, 
+          deposits.walletId, 
+          deposits.amount, 
+          deposits.currencyId, 
+          deposits.proofOfPayment, 
+          deposits.status, 
+          deposits.createdAt,
+          CONCAT(users.firstName, ' ', users.lastName) AS depositorName, 
+          users.phone, 
+          users.email,
+          currencies.name AS currencyName,
+          subscription_plans.label AS subscriptionPlanLabel
+        FROM 
+          deposits
+        JOIN 
+          users ON deposits.userId = users.id
+        JOIN 
+          currencies ON deposits.currencyId = currencies.id
+        JOIN 
+          subscription_plans ON deposits.planId = subscription_plans.id;
+      `;
+      
+      const deposits = await query(selectQuery);
+      
+      if (deposits.length > 0) {
+        return {
+          message: 'Deposits retrieved successfully',
+          data: deposits,
+          success: true,
+        };
+      } else {
+        return {
+          message: 'No deposits found',
+          data: [],
+          success: true,
+        };
+      }
     } catch (error) {
-        throw error;
+      return {
+        message: `Failed to retrieve deposits: ${error.message}`,
+        success: false,
+      };
     }
-};
+  };
+  
+
 
 
 // Service method to get all unapproved deposits
@@ -2021,6 +2106,59 @@ cryptoInvestmentService.getRequestedPayouts = async () => {
         };
     }
 };
+
+
+
+cryptoInvestmentService.getAllPayouts = async () => {
+    try {
+      const queryStr = `
+        SELECT 
+          payouts.id AS payoutId,
+          payouts.amount,
+          payouts.status,
+          payouts.createdAt,
+          payouts.proofPath,
+          wallets.walletAddress,
+          currencies.code AS currencyCode,
+          currencies.symbol AS currencySymbol,
+          CONCAT(users.firstName, ' ', users.lastName) AS depositorName -- Retrieve the name of the user who requested the payout
+        FROM 
+          payouts
+        INNER JOIN 
+          wallets ON payouts.walletId = wallets.id
+        INNER JOIN 
+          currencies ON payouts.currencyId = currencies.id
+        LEFT JOIN 
+          deposits ON wallets.depositId = deposits.id
+        LEFT JOIN 
+          users ON deposits.userId = users.id -- Join with users to get the depositor's name
+        ORDER BY 
+          payouts.createdAt DESC; -- Order the payouts by the latest created date
+      `;
+  
+      const result = await query(queryStr);
+  
+      if (result.length > 0) {
+        return {
+          message: 'Payout details retrieved successfully',
+          data: result,
+          success: true,
+        };
+      } else {
+        return {
+          message: 'No payouts found',
+          data: [],
+          success: true,
+        };
+      }
+    } catch (error) {
+      return {
+        message: `Error retrieving payouts: ${error.message}`,
+        success: false,
+      };
+    }
+  };
+  
 
 cryptoInvestmentService.uploadPaymentProof = async (payoutId, proofPath) => {
     try {

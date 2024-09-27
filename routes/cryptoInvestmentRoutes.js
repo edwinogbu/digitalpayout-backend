@@ -128,7 +128,7 @@ router.get('/subscriptions/user/:userId', cryptoInvestmentController.getSubscrip
 // router.post('/payouts', cryptoInvestmentController.requestPayout);
 // router.put('/payouts/:payoutId/status', cryptoInvestmentController.updatePayoutStatus);
 // router.get('/wallets/:walletId/payouts', cryptoInvestmentController.getPayoutsByWalletId);
-// router.get('/payouts', cryptoInvestmentController.getAllPayouts);
+router.get('/payouts', cryptoInvestmentController.getAllPayouts);
 
 
 // Route to request a payout

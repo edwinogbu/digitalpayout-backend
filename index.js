@@ -14,6 +14,8 @@ const subscriptionPlanRoutes = require('./routes/subscriptionPlanRoutes')
 const testimonialRoutes = require('./routes/testimonialRoutes')
 const postsDepositsRoutes = require('./routes/postDepositsRoutes')
 const blogPostsRoutes = require('./routes/blogPostsRoutes')
+const paymentGatewayRoutes = require('./routes/paymentGatewayRoutes');
+
 const session = require('express-session');
 
 // const conversationRoutes = require('./routes/conversationRoutes');
@@ -85,6 +87,7 @@ app.use('/api/subscription', subscriptionPlanRoutes);
 app.use('/api/testimonial', testimonialRoutes);
 app.use('/api/postDeposits', postsDepositsRoutes)
 app.use('/api/blogs', blogPostsRoutes)
+app.use('/api/payment-gateways', paymentGatewayRoutes);
 
 
 

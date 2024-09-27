@@ -90,7 +90,10 @@ testimonialService.getAllTestimonials = async () => {
     try {
         const selectQuery = 'SELECT * FROM testimonials';
         const testimonials = await query(selectQuery);
-        return testimonials;
+        return {
+            message:'testimonials retrieved successfully',
+            testimonials:testimonials
+        };
     } catch (error) {
         throw error;
     }

@@ -28,7 +28,7 @@ async function createTestimonial(req, res) {
 async function getAllTestimonials(req, res) {
     try {
         const testimonials = await testimonialService.getAllTestimonials();
-        res.status(200).json({ success: true, testimonials });
+        res.status(200).json({ success: true, message:'Testimonials retrived successfully', testimonials:testimonials });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to retrieve testimonials.', error: error.message });
     }

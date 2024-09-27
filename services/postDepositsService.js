@@ -177,6 +177,8 @@ postDepositsService.getAllRecentWithdrawals = async (limit = 10) => {
     }
 };
 
+
+
 // Optimized Get all recent deposits
 postDepositsService.getAllRecentDeposits = async (limit = 10) => {
     try {
@@ -198,5 +200,52 @@ postDepositsService.getAllRecentDeposits = async (limit = 10) => {
         throw new Error('Unable to retrieve recent deposits at this time. Please try again later.');
     }
 };
+
+
+
+// Optimized Get all recent withdrawals with status 'publish'
+// postDepositsService.getAllRecentWithdrawals = async (limit = 10) => {
+//     try {
+//         const selectQuery = `
+//             SELECT * FROM post_deposits
+//             WHERE type = 'withdrawal' AND status = 'publish'
+//             ORDER BY createdAt DESC
+//             LIMIT ?
+//         `;
+//         const recentWithdrawals = await query(selectQuery, [limit]);
+
+//         return {
+//             success: true,
+//             message: recentWithdrawals.length > 0 ? 'Recent withdrawals retrieved successfully.' : 'No recent withdrawals found.',
+//             data: recentWithdrawals,
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving recent withdrawals:', error.message);
+//         throw new Error('Unable to retrieve recent withdrawals at this time. Please try again later.');
+//     }
+// };
+
+// // Optimized Get all recent deposits with status 'publish'
+// postDepositsService.getAllRecentDeposits = async (limit = 10) => {
+//     try {
+//         const selectQuery = `
+//             SELECT * FROM post_deposits
+//             WHERE type = 'deposit' AND status = 'publish'
+//             ORDER BY createdAt DESC
+//             LIMIT ?
+//         `;
+//         const recentDeposits = await query(selectQuery, [limit]);
+
+//         return {
+//             success: true,
+//             message: recentDeposits.length > 0 ? 'Recent deposits retrieved successfully.' : 'No recent deposits found.',
+//             data: recentDeposits,
+//         };
+//     } catch (error) {
+//         console.error('Error retrieving recent deposits:', error.message);
+//         throw new Error('Unable to retrieve recent deposits at this time. Please try again later.');
+//     }
+// };
+
 
 module.exports = postDepositsService;
